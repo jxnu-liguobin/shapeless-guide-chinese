@@ -113,6 +113,7 @@ product.tail.tail.tail.head
 // <console>:15: error: could not find implicit value for 
 // parameter c: shapeless.ops.hlist.IsHCons[shapeless.HNil]
 // product.tail.tail.tail.head
+//                        ^
 ```
 
 我们能对HList对象进行操纵和转换，还包括检查和遍历。例如，我们能用::方法将元素插入到列表的最前端。再次注意，元素个数及元素具体类型是如何反映到结果中的（下面将42L通过::与product相连接，可以看到返回的newProduct的元素个数及元素具体类型）。如下：

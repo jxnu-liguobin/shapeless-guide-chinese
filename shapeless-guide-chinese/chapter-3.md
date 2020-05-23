@@ -6,10 +6,9 @@
 
 在深入研究派生类型类实例之前，我们先来浏览一下类型类有哪些重要特征。
 
-类型类是一种从Haskell中借用的编码模式，在Haskell中“类”这个词没有像面向对象编程语言中的实际意义。Scala中使用特质和隐式声明的方式来实现类型类。类型类是带类型参数的特质，是对一些通用功能的分类，使其可以被更大范围的使用。如下创建一个CsvEncoder类型类，实现将A类型实例转换为CSV文件中的一行：
+类型类是一种从Haskell中借用的编码模式，在Haskell中“类”这个词没有像面向对象编程语言中的实际意义。Scala中使用特质和隐式声明的方式来实现类型类。类型类是带类型参数的特质，是对一些通用功能的分类，使其可以被应用到多种类型。如下创建一个CsvEncoder类型类，实现将A类型实例转换为CSV文件中的一行：
 
 ```text
-
 trait CsvEncoder[A] {
     def encode(value: A): List[String]
 }
@@ -18,10 +17,10 @@ trait CsvEncoder[A] {
 我们为每一个关心的类型实现此类型类实例，如果想让这些实例在我们的作用域内能被自动引入，可以将其放在类型类对应的伴随对象中，或者放到一个独立的库中，由用户手动导入。如下代码实现为Employee对象定义一个隐式CsvEncoder实例——employeeEncoder：
 
 ```text
-
+// Custom data type:
 case class Employee(name: String, number: Int, manager: Boolean)
 
-
+// CsvEncoder instance for the custom data type:
 implicit val employeeEncoder: CsvEncoder[Employee] = 
     new CsvEncoder[Employee] {
         def encode(e: Employee): List[String] = 
@@ -54,10 +53,10 @@ val employees: List[Employee] = List(
 
 ```text
 writeCsv(employees) 
-
-
-
-
+// res4: String =
+// Bill,1,yes
+// Peter,2,no
+// Milton,3,no
 ```
 
 只要在作用域内有一个与writeCsv的values参数类型一致的隐式CsvEncoder实例，writeCsv方法就能正常运行。如下实现将IceCream实例编码为CSV：
@@ -82,10 +81,10 @@ val iceCreams: List[IceCream] = List(
 )
 
 writeCsv(iceCreams) 
-
-
-
-
+// res7: String =
+// Sundae,1,no
+// Cornetto,0,yes
+// Banana Split,0,no
 ```
 
 ### 3.1.1 解析类型类实例 <a id="311-&#x89E3;&#x6790;&#x7C7B;&#x578B;&#x7C7B;&#x5B9E;&#x4F8B;"></a>
@@ -110,15 +109,15 @@ implicit def pairEncoder[A, B](
 
 ```text
 writeCsv(employees zip iceCreams) 
-
-
-
-
+// res8: String =
+// Bill,1,yes,Sundae,1,no
+// Peter,2,no,Cornetto,0,yes
+// Milton,3,no,Banana Split,0,no
 ```
 
-编译器为了组合各个实例会对给定的一套隐式值和隐式函数进行搜索，最终生成我们需要的实例，这种特性我们称之为“隐式解析（implicit resolution）”，这是Scala中类型类模式如此强大的原因。
+编译器为了组合各个实例会对给定的一套隐式值（val）和隐式函数（def）进行搜索，最终生成我们需要的实例，这种特性我们称之为“隐式解析（implicit resolution）”，这是Scala中类型类模式如此强大的原因。
 
-即使隐式解析如此强大，编译器依然不能区分不同的模式类和密封特质，我们仍然需要为各种ADT手动定义实例。shapeless的泛型表示改变了这些，它使得我们可以自由的为任意ADT派生实例。
+即使隐式解析如此强大，编译器依然不能区分不同的样例类和密封特质，我们仍然需要为各种ADT手动定义实例。shapeless的泛型表示改变了这些，它使得我们可以自由的为任意ADT派生实例。
 
 ### 3.1.2 惯用的类型类定义方式 <a id="312-&#x60EF;&#x7528;&#x7684;&#x7C7B;&#x578B;&#x7C7B;&#x5B9A;&#x4E49;&#x65B9;&#x5F0F;"></a>
 
@@ -126,16 +125,16 @@ writeCsv(employees zip iceCreams)
 
 ```text
 object CsvEncoder { 
-    
+    // "Summoner" method
     def apply[A](implicit enc: CsvEncoder[A]): CsvEncoder[A] = enc
 
-    
+    // "Constructor" method
     def instance[A](func: A => List[String]): CsvEncoder[A] = 
         new CsvEncoder[A] {
             def encode(value: A): List[String] = func(value) 
         }
 
-    
+    // Globally visible type class instances  
 }
 ```
 
@@ -143,14 +142,14 @@ apply方法也被称为“召唤员”或者“实现者”，可以为给定的
 
 ```text
 CsvEncoder[IceCream] 
-
+// res9: CsvEncoder[IceCream] = $anon$1@5940ac6a
 ```
 
 一般情况下apply方法与scala.Predef类中定义的implicitly功能一致。implicitly创建实例方式如下：
 
 ```text
 implicitly[CsvEncoder[IceCream]] 
-
+// res10: CsvEncoder[IceCream] = $anon$1@5940ac6a
 ```
 
 然而我们将在4.2节看到，当我们使用shapeless的时候会碰到一些implicitly不能正确推断出类型的情形，此种情况使用shapeless中定义apply方法的方式依然能正常解决，所以为我们创建的每一个类型类写一个apply方法是值得的。我们也能用shapeless中的特殊的“the”方法（后续详细介绍）来实现。代码如下：
@@ -159,10 +158,10 @@ implicitly[CsvEncoder[IceCream]]
 import shapeless._
 
 the[CsvEncoder[IceCream]] 
-
+// res11: CsvEncoder[IceCream] = $anon$1@5940ac6a
 ```
 
-在CsvEncoder类的伴随对象中定义的instance方法，有时也称之为纯净方法，能够为创建新的类型类实例提供简洁的语法，去除匿名类语法的不必要的模板代码。所以以下代码：
+在CsvEncoder类的伴随对象中定义的instance方法，有时也称之为纯净方法，能够为创建新的类型类实例提供简洁的语法，去除匿名类语法的不必要的模板代码。如下代码：
 
 ```text
 implicit val booleanEncoder: CsvEncoder[Boolean] = 
@@ -183,10 +182,10 @@ implicit val booleanEncoder: CsvEncoder[Boolean] =
 
 ## 3.2 为乘积类型（product）派生类型类实例 <a id="32-&#x4E3A;&#x4E58;&#x79EF;&#x7C7B;&#x578B;&#xFF08;product&#xFF09;&#x6D3E;&#x751F;&#x7C7B;&#x578B;&#x7C7B;&#x5B9E;&#x4F8B;"></a>
 
-这一节我们将使用shapeless为乘积类型派生类型类的实例（如模式类），我们将使用以下两个知识点：
+这一节我们将使用shapeless为乘积类型派生类型类的实例（如样例类），我们将使用以下两个知识点：
 
 1. 如果我们已经有了HList实例的头（head）和尾（tail）的类型类实例，我们就能为整个HList实例派生类型类实例。
-2. 如果我们有一个模式类A，一个Generic\[A\]类型的实例gen和gen的Repr的类型类实例，那么我们能将这些组合起来为A创建一个类型类实例。
+2. 如果我们有一个样例类A，一个Generic\[A\]类型的实例gen和gen的Repr的类型类实例，那么我们能将这些组合起来为A创建一个类型类实例。
 
 以CsvEncoder类和IceCream类作为例子，我们可以看到以下几点：
 
@@ -244,7 +243,7 @@ val reprEncoder: CsvEncoder[String :: Int :: Boolean :: HNil] =
     implicitly
 
 reprEncoder.encode("abc" :: 123 :: true :: HNil) 
-
+// res9: List[String] = List(abc, 123, yes)
 ```
 
 （implicitly会自动搜寻上述中的隐式值创建目标类型类实例）
@@ -267,13 +266,13 @@ implicit val iceCreamEncoder: CsvEncoder[IceCream] = {
 
 ```text
 writeCsv(iceCreams) 
-
-
-
-
+// res11: String =
+// Sundae,1,no
+// Cornetto,0,yes
+// Banana Split,0,no
 ```
 
-这个解决方案只是针对IceCream类的，理想情况下我们希望能有一个单一的规则来处理所有的模式类，当然这个模式类要有一个Generic实例以及与之匹配的CsvEncoder实例。让我们一步步的来实现这一点。第一步代码如下：
+这个解决方案只是针对IceCream类的，理想情况下我们希望能有一个单一的规则来处理所有的样例类，当然这个样例类要有一个Generic实例以及与之匹配的CsvEncoder实例。让我们一步步的来实现这一点。第一步代码如下：
 
 ```text
 implicit def genericEncoder[A](
@@ -292,8 +291,10 @@ implicit def genericEncoder[A](
     enc: CsvEncoder[gen.Repr] 
 ): CsvEncoder[A] = createEncoder(a => enc.encode(gen.to(a))) 
 
-    only be referenced in a subsequent parameter section
-
+// <console>:24: error: illegal dependent method type: 
+// parameter may only be referenced in a subsequent parameter section
+//          gen: Generic[A],
+//          ^
 
 ```
 
@@ -308,9 +309,9 @@ implicit def genericEncoder[A, R](
         createEncoder(a => enc.encode(gen.to(a)))
 ```
 
-我们将在下一章详细介绍这种编码模式，它能够正常编译和工作，并能满足我们用于任何模式类的预期。简单的说，这种定义实现的方式是：给定一个类型A、一个HList的类型R、一个从A映射到R的隐式Generic实例以及一个为类型R准备的CsvEncoder，这样我们就能为A创建一个CsvEncoder实例。
+我们将在下一章详细介绍这种编码模式，它能够正常编译和工作，并能满足我们用于任何样例类的预期。简单的说，这种定义实现的方式是：给定一个类型A、一个HList的类型R、一个从A映射到R的隐式Generic实例以及一个为类型R准备的CsvEncoder，这样我们就能为A创建一个CsvEncoder实例。
 
-我们现在有了一个能处理任何模式类的完整系统。调用方式如下：
+我们现在有了一个能处理任何样例类的完整系统。调用方式如下：
 
 ```text
 writeCsv(iceCreams)
@@ -358,19 +359,19 @@ implicit def genericEncoder[A, R](
 
 以上部分看上去像是漂亮的魔法，但是请接受一个重大的现实，如果代码出错，编译器并不擅长告诉我们错误原因。
 
-有两个主要原因可能会导致上述代码编译错误。第一个是编译器不能找到Generic实例。例如对非模式类调用writeCsv方法。下面的代码直接对普通的Foo类进行操作，由于无法获取Generic实例而报错：
+有两个主要原因可能会导致上述代码编译错误。第一个是编译器不能找到Generic实例。例如对非样例类调用writeCsv方法。下面的代码直接对普通的Foo类进行操作，由于无法获取Generic实例而报错：
 
 ```text
 class Foo(bar: String, baz: Int)
 
-writeCsv(List(new Foo("abc", 123))) 
-
-    encoder: CsvEncoder[Foo] 
-
-
+writeCsv(List(new Foo("abc", 123)))
+// <console>:26: error: could not find implicit value for parameter
+//   encoder: CsvEncoder[Foo]
+//        writeCsv(List(new Foo("abc", 123)))
+//                ^
 ```
 
-这种情况错误提示很容易理解，如果shapeless不能推断出Generic实例，那就意味着此时处理的数据类型不是一个ADT，在代数中有些情况下有些类型既不是模式类也不是密封的抽象类型。
+这种情况错误提示很容易理解，如果shapeless不能推断出Generic实例，那就意味着此时处理的数据类型不是一个ADT，而是在代数的某个地方它既不是样例类也不是密封的抽象类型。
 
 编译器不能为HList推断出CsvEncoder实例也是潜在的错误类型，一般情况造成这个错误的原因可能是缺少了ADT中的某个字段对应类型的CsvEncoder实例。例如，如果我们没有为java.util.Date定义隐式CsvEncoder实例，下面的代码就会编译失败：
 
@@ -380,10 +381,10 @@ import java.util.Date
 case class Booking(room: String, date: Date)
 
 writeCsv(List(Booking("Lecture hall", new Date())))
-
-    encoder: CsvEncoder[Booking]
-
-
+// <console>:28: error: could not find implicit value for parameter
+//     encoder: CsvEncoder[Booking]
+// writeCsv(List(Booking("Lecture hall", new Date())))
+//         ^
 ```
 
 这个错误提示对我们来说并不是很有帮助，编译器只知道它尝试了大量的隐式组合但是并不能得到正确的CsvEncoder实例。它也不清楚哪一个结合是接近需要的类型的，所以它不能告诉我们失败的具体原因。
