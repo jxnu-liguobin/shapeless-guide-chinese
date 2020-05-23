@@ -1,6 +1,6 @@
 # Table of contents
 
-* [shapeless guide cn](README.md)
+* [shapeless guide chinese](README.md)
 
 ## shapeless-guide-cn
 
