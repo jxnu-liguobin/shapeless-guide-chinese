@@ -1,8 +1,8 @@
 # Table of contents
 
-* [shapeless guide chinese](README.md)
+* [shapeless guide with chinese](README.md)
 
-## shapeless-guide-chinese
+## shapeless guide with chinese <a id="shapeless-guide-chinese"></a>
 
 * [前言 · shapeless guide](shapeless-guide-chinese/chapter-0.md)
 * [第一章 简介](shapeless-guide-chinese/chapter-1.md)

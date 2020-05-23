@@ -97,29 +97,29 @@ val product: String :: Int :: Boolean :: HNil =
 
 ```text
 val first = product.head 
-
+// first: String = Sunday
 
 val second = product.tail.head 
-
+// second: Int = 1
 
 val rest = product.tail.tail 
-
+// rest: Boolean :: shapeless.HNil = false :: HNil
 ```
 
 编译器知道每一个HList对象的准确长度，所以如果取空列表的head和tail就会造成编译错误。如下：
 
 ```text
 product.tail.tail.tail.head 
-
-    shapeless.ops.hlist.IsHCons[shapeless.HNil] 
-
-
+// <console>:15: error: could not find implicit value for 
+// parameter c: shapeless.ops.hlist.IsHCons[shapeless.HNil]
+// product.tail.tail.tail.head
 ```
 
 我们能对HList对象进行操纵和转换，还包括检查和遍历。例如，我们能用::方法将元素插入到列表的最前端。再次注意，元素个数及元素具体类型是如何反映到结果中的（下面将42L通过::与product相连接，可以看到返回的newProduct的元素个数及元素具体类型）。如下：
 
 ```text
-val newProduct: Long :: String :: Int :: Boolean :: HNil = 42L :: product
+val newProduct = 42L :: product
+//Long :: String :: Int :: Boolean :: HNil
 ```
 
 shapless也为HList提供了更多的复杂操作，如：映射（map）、过滤（filter）以及拼接列表（concatenating list）。我们会在第二部分具体讨论。
@@ -137,21 +137,21 @@ case class IceCream(name: String, numCherries: Int, inCone: Boolean)
 
 val iceCreamGen = Generic[IceCream] 
 
-    String,shapeless.::[Int,shapeless.::[Boolean,shapeless.HNil]]]} = 
-    anon$macro$4$1@745fe7b1
+// iceCreamGen: shapeless.Generic[IceCream]{type Repr = String :: Int
+// :: Boolean :: shapeless.HNil} = anon$macro$4$1@6b9323fe
 ```
 
 注意Generic实例有一个Repr类型成员，Repr是Generic实例的泛型表示的类型。上面的代码中iceCreamGen实例的Repr类型为String :: Int :: Boolean :: HNil。Generic实例有两个方法：一个将原始对象转换为Repr类型，另一个将Repr类型转为原始对象。如下：
 
 ```text
 val iceCream = IceCream("Sundae", 1, false)
-
+// iceCream: IceCream = IceCream(Sundae,1,false)
 
 val repr = iceCreamGen.to(iceCream) 
-
+// repr: iceCreamGen.Repr = Sundae :: 1 :: false :: HNil
 
 val iceCream2 = iceCreamGen.from(repr) 
-
+// iceCream2: IceCream = IceCream(Sundae,1,false)
 ```
 
 如果两个ADT对象Repr类型相同，则我们可以使用它们的Generic实例进行相互转换。如下实现Employee和IceCream对象之间的转换：
@@ -159,14 +159,14 @@ val iceCream2 = iceCreamGen.from(repr)
 ```text
 case class Employee(name: String, number: Int, manager: Boolean)
 
-
+// Create an employee from an ice cream:
 val employee = Generic[Employee].from(Generic[IceCream].to(iceCream)) 
-
+// employee: Employee = Employee(Sundae,1,false)
 ```
 
 > 其它乘积类型
 >
-> 值得注意的是在Scala中Tuple实际上也是一种模式类，所以Generic也能应用于Tuple。如下：
+> 值得注意的是在Scala中Tuple实际上也是一种样例类，所以Generic也能应用于Tuple。如下：
 >
 > ```text
 > val tupleGen = Generic[(String, Int, Boolean)]
@@ -178,7 +178,7 @@ val employee = Generic[Employee].from(Generic[IceCream].to(iceCream))
 >
 > ```
 >
-> Generic也能用于超过22个字段的模式类。如下：
+> Generic也能用于超过22个字段的样例类。如下：
 >
 > ```text
 > case class BigData( 
@@ -188,8 +188,11 @@ val employee = Generic[Employee].from(Generic[IceCream].to(iceCream))
 > Generic[BigData].from(Generic[BigData].to(BigData( 
 >     1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23))) 
 >
-> (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
+> // res6: BigData = 
+> // BigData (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
 > ```
+
+在Scala2.10及更早版本中，Scala的样例类限制为22个字段。 此限制在2.11中移除这个限制（元组和函数仍有限制），但是使用HLists将有助于避免Scala中的22个字段的限制。可参考[limitations of 22 fields in Scala](https://underscore.io/blog/posts/2016/10/11/twenty-two.html)。
 
 ## 2.3 余积类型（coproduct）泛型编码 <a id="23-&#x4F59;&#x79EF;&#x7C7B;&#x578B;&#xFF08;coproduct&#xFF09;&#x6CDB;&#x578B;&#x7F16;&#x7801;"></a>
 
@@ -209,19 +212,19 @@ type Light = Red :+: Amber :+: Green :+: CNil
 
 ```text
 val red: Light = Inl(Red())
-
+// red: Light = Inl(Red())
 
 val green: Light = Inr(Inr(Inl(Green())))
-
+// green: Light = Inr(Inr(Inl(Green())))
 ```
 
 每一个余积类型均以CNil结束，CNil是一个没有值的空类型，与Nothing相似。我们不能实例化CNil或创建一个只有Inr实例的余积类型，在每一个值中均应有一个Inl。
 
-再次强调，余积类型并不特别，以上功能均可通过Either和Nothing实现。尽管使用Nothing有技术问题，但是我们能使用其它任意一个无意义的单例类型来代替CNil。
+再次强调，余积类型并不特别，以上功能均可通过Either和Nothing实现。尽管使用Nothing存在技术困难，但是我们能使用其它任意一个无意义的单例类型来代替CNil。
 
 ## 2.3.1 使用Generic转换泛型编码 <a id="231-&#x4F7F;&#x7528;generic&#x8F6C;&#x6362;&#x6CDB;&#x578B;&#x7F16;&#x7801;"></a>
 
-余积类型看似很难解析，然而我们能看到它们非常适合较大的泛型编码场景。除了能解析模式类和模式对象，shapeless的Generic类型类还能解析密封特质和抽象类。如下代码将Generic应用于密封特质：
+余积类型看似很难解析，然而我们能看到它们非常适合较大的泛型编码场景。除了能解析样例类和样例对象，shapeless的Generic类型类还能解析密封特质和抽象类。如下代码将Generic应用于密封特质：
 
 ```text
 import shapeless.Generic
@@ -232,22 +235,23 @@ final case class Circle(radius: Double) extends Shape
 
 val gen = Generic[Shape] 
 
-    shapeless.:+:[Circle,shapeless.CNil]]} = anon$macro$1$1@20ec902e
+// gen: shapeless.Generic[Shape]{type Repr = Rectangle :+: Circle :+:
+// shapeless.CNil} = anon$macro$1$1@1a28fc61
 ```
 
 Shape的Generic实例（gen）的Repr类型是“Rectangle :+: Circle :+: CNil”，它是密封特质Shape的子类的余积。我们能用gen的to和from方法在Shape的子类实例和gen.Repr之间进行相互转换。代码如下：
 
 ```text
 gen.to(Rectangle(3.0, 4.0))
-
+// res3: gen.Repr = Inl(Rectangle(3.0,4.0))
 
 gen.to(Circle(1.0)) 
-
+// res4: gen.Repr = Inr(Inl(Circle(1.0)))
 ```
 
 ## 2.4 小结 <a id="24-&#x5C0F;&#x7ED3;"></a>
 
-这一章我们讨论了shapeless为ADT提供的泛型表示：用HList表示乘积类型和用Coproduct表示余积类型。也介绍了通过Generic类型类进行ADT实例和它们的泛型表示之间的相互转换。目前，还没有讨论为什么泛型编码如此具有吸引力。本章介绍的ADT之间的相互转换这一使用案例很有趣但是并不是很有用。
+这一章我们讨论了Scala中shapeless为ADT提供的泛型表示：用HList表示乘积类型和用Coproduct表示余积类型。也介绍了通过Generic类型类进行ADT实例和它们的泛型表示之间的相互转换。目前，还没有讨论为什么泛型编码如此具有吸引力。本章介绍的ADT之间的相互转换这一使用案例很有趣但是并不是很有用。
 
-HList和Coproduct的强大之处源于它们的递归结构（此处递归的意思是像::\[H, T\]这样，T同样代表一个新的::\[H, T\]，所以称之为递归），我们可以遍历泛型表示以及从它们的组成元素中推算值。下一章我们将聚焦于第一个实际应用：自动派生类型类实例。
+HList和Coproduct的强大之处源于它们的递归结构（此处递归的意思是像::\[H, T\]这样，T同样代表一个新的::\[H, T\]，所以称之为递归），我们可以遍历泛型表示并根据它们的组成元素计算值。下一章我们将聚焦于第一个实际应用：自动派生类型类实例。
 
