@@ -193,7 +193,7 @@ val employee = Generic[Employee].from(Generic[IceCream].to(iceCream))
 > // BigData (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)
 > ```
 
-在Scala2.10及更早版本中，Scala的样例类限制为22个字段。 此限制在2.11中移除这个限制（元组和函数仍有限制），但是使用HLists将有助于避免Scala中的22个字段的限制。可参考[limitations of 22 fields in Scala](https://underscore.io/blog/posts/2016/10/11/twenty-two.html)。
+在Scala2.10及更早版本中，Scala的样例类限制为22个字段。 此限制在2.11中移除（元组和函数仍有限制），但是使用HLists将有助于避免Scala中的22个字段的限制。可参考[limitations of 22 fields in Scala](https://underscore.io/blog/posts/2016/10/11/twenty-two.html)。
 
 ## 2.3 余积类型（coproduct）泛型编码 <a id="23-&#x4F59;&#x79EF;&#x7C7B;&#x578B;&#xFF08;coproduct&#xFF09;&#x6CDB;&#x578B;&#x7F16;&#x7801;"></a>
 

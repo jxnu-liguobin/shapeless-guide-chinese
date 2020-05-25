@@ -435,8 +435,9 @@ val shapes: List[Shape] = List(
 )
 
 writeCsv(shapes) 
-
-    encoder: CsvEncoder[Shape] 
+// <console>:26: error: could not find implicit value for parameter encoder: CsvEncoder[Shape]
+//        writeCsv(shapes)
+//                ^
 
 
 ```
@@ -452,9 +453,9 @@ implicit val doubleEncoder: CsvEncoder[Double] =
 
 ```text
 writeCsv(shapes) 
-
-
-
+// res7: String =
+// 3.0,4.0
+// 1.0
 ```
 
 SI-7046 BUG
@@ -465,7 +466,7 @@ Scala编译器有一个叫做[SI-7046](https://issues.scala-lang.org/browse/SI-7
 
 ### 3.3.1 美化CSV输出 <a id="331-&#x7F8E;&#x5316;csv&#x8F93;&#x51FA;"></a>
 
-目前我们的CSV编码方式并不实用，Rectangle类型和Circle类型的字段在输出中占据了相同的列。为了解决这个问题我们需要修改CsvEncoder的定义来具体化数据类型的宽度并为输出增加相应的空白字段，如果是Inl则在其输出的右边增加对应的空白字段，如果是Inr则在其左端增加对应的空白字段。1.3（原文为1.2，貌似是个错误）节中所介绍的我们的样例仓库中包含了一个完整的CsvEncoder版本解决了这个问题。
+目前我们的CSV编码方式并不实用，Rectangle类型和Circle类型的字段在输出中占据了相同的列。为了解决这个问题我们需要修改CsvEncoder的定义来具体化数据类型的宽度并为输出增加相应的空白字段，如果是Inl则在其输出的右边增加对应的空白字段，如果是Inr则在其左端增加对应的空白字段。1.3（原文为1.2，可能是个错误）节中所介绍的我们的样例仓库中包含了一个完整的CsvEncoder版本解决了这个问题。
 
 ## 3.4 为递归类型派生类型类实例 <a id="34-&#x4E3A;&#x9012;&#x5F52;&#x7C7B;&#x578B;&#x6D3E;&#x751F;&#x7C7B;&#x578B;&#x7C7B;&#x5B9E;&#x4F8B;"></a>
 
@@ -477,14 +478,13 @@ case class Branch[A](left: Tree[A], right: Tree[A]) extends Tree[A]
 case class Leaf[A](value: A) extends Tree[A]
 ```
 
-理论上根据前面的代码我们已经能够为Tree类型正确的创建一个CsvEncoder实例。然而&\#x\#x4E0B;述代码会造成编译错误：
+理论上根据前面的代码我们已经能够为Tree类型正确的创建一个CsvEncoder实例。然而，上述代码会造成编译错误：
 
 ```text
 CsvEncoder[Tree[Int]]
-
-    CsvEncoder[Tree[Int]]
-
-
+// <console>:23: error: could not find implicit value for parameter enc: CsvEncoder[Tree[Int]]
+//        CsvEncoder[Tree[Int]]
+//                  ^
 ```
 
 造成上述问题的原因是Tree是递归类型，编译器感知到对隐式参数的无限循环调用所以它放弃了寻找并报错。
@@ -496,11 +496,11 @@ CsvEncoder[Tree[Int]]
 探索式是用来避免无限循环的，如果编译器在搜索一个特定分支的时候两次看到同一个目标类型就会放弃并移到下一分支。分析CsvEncode\[Tree\[Int\]\]的展开过程就会看到这种情况。其隐式解析处理过程如下：
 
 ```text
-CsvEncoder[Tree[Int]]                          
-CsvEncoder[Branch[Int] :+: Leaf[Int] :+: CNil] 
-CsvEncoder[Branch[Int]]                        
-CsvEncoder[Tree[Int] :: Tree[Int] :: HNil]     
-CsvEncoder[Tree[Int]]                          
+CsvEncoder[Tree[Int]]                            //1                      
+CsvEncoder[Branch[Int] :+: Leaf[Int] :+: CNil]   //2
+CsvEncoder[Branch[Int]]                          //3
+CsvEncoder[Tree[Int] :: Tree[Int] :: HNil]       //4
+CsvEncoder[Tree[Int]]                            //5 uh oh
 ```
 
 可以看到Tree\[A\]在第一行和第五行出现了两次，所以编译器移动到下一搜索分支，最终结果就是找不到一个合适的隐式值。
@@ -515,10 +515,10 @@ case class Foo(bar: Bar)
 Foo类型的展开过程如下：
 
 ```text
-CsvEncoder[Foo]                   
-CsvEncoder[Bar :: HNil]           
-CsvEncoder[Bar]                   
-CsvEncoder[Int :: String :: HNil] 
+CsvEncoder[Foo]                       //1                
+CsvEncoder[Bar :: HNil]               //2        
+CsvEncoder[Bar]                       //3       
+CsvEncoder[Int :: String :: HNil]     //4 uh oh
 ```
 
 编译器在这个搜索的分支中两次尝试解析CsvEncoder\[::\[H, T\]\]，分别在上述过程中的第2行和第4行，T这个类型参数在第4行比第2行更加复杂，所以编译器假设这个搜索的分支有歧义，会再次移到下一分支，结果就是无法生成一个合适的实例。
@@ -527,15 +527,15 @@ CsvEncoder[Int :: String :: HNil]
 
 隐式歧义对于像shapeless这样的类库来说将是致命的。幸运的是shapeless中提供了一个叫做Lazy的解决方案。Lazy完成以下两件事情：
 
-1. 通过监控前述的过度防御的收敛探测，在编译期间阻止隐式歧义的发生；
-2. 在运行期间推迟隐式参数的评估，允许对自身类型隐式值的派生。（大概是说自己找自己，隐式搜索）
+1. 通过监控前述的过度防御的收敛探测算法，在编译期间阻止了隐式冲突的发生；
+2. 在运行期间推迟隐式参数的评估，从而允许隐式推导自引用。（大概是说自己找自己，隐式搜索）
 
 Lazy的使用方式是以具体的隐式参数的类型为其类型参数。根据以往经验，最好对任何HList或Coprouduct类型的head类型和任何Generic实例的Repr类型参数采用此操作。示例代码如下：
 
 ```text
 implicit def hlistEncoder[H, T <: HList](
     implicit
-    hEncoder: Lazy[CsvEncoder[H]], 
+    hEncoder: Lazy[CsvEncoder[H]], // wrap in Lazy
     tEncoder: CsvEncoder[T] 
 ): CsvEncoder[H :: T] = createEncoder {
     case h :: t => 
@@ -544,7 +544,7 @@ implicit def hlistEncoder[H, T <: HList](
 
 implicit def coproductEncoder[H, T <: Coproduct](
     implicit
-    hEncoder: Lazy[CsvEncoder[H]], 
+    hEncoder: Lazy[CsvEncoder[H]], // wrap in Lazy
     tEncoder: CsvEncoder[T] 
 ): CsvEncoder[H :+: T] = createEncoder {
     case Inl(h) => hEncoder.value.encode(h) 
@@ -554,22 +554,22 @@ implicit def coproductEncoder[H, T <: Coproduct](
 implicit def genericEncoder[A, R](
     implicit
     gen: Generic.Aux[A, R], 
-    rEncoder: Lazy[CsvEncoder[R]] 
+    rEncoder: Lazy[CsvEncoder[R]] // wrap in Lazy
 ): CsvEncoder[A] = createEncoder { value => 
     rEncoder.value.encode(gen.to(value)) 
 }
 ```
 
-这样就会阻止编译器过早放弃，并且使解决方案能够在像Tree类型一样的复杂的或递归的类型中正常起作用。Tree类型的正常调用情况如下：
+这可以阻止编译器过早放弃，并且使解决方案能够在像Tree类型一样的复杂的或递归的类型中正常起作用。Tree类型的正常调用情况如下：
 
 ```text
 CsvEncoder[Tree[Int]] 
-
+// res2: CsvEncoder[Tree[Int]] = $anon$1@2199aca1
 ```
 
 ## 3.5 调试隐式解析 <a id="35-&#x8C03;&#x8BD5;&#x9690;&#x5F0F;&#x89E3;&#x6790;"></a>
 
-隐式解析中的失败常常令人困惑并有挫败感。以下会介绍一些当隐式参数不起作用的时候的一些调试技巧。
+隐式解析中的失败常常令人困惑和沮丧。当隐式参数不起作用时可以用下面的一些技巧。
 
 ### 3.5.1 使用implicitly进行调试 <a id="351-&#x4F7F;&#x7528;implicitly&#x8FDB;&#x884C;&#x8C03;&#x8BD5;"></a>
 
@@ -579,46 +579,43 @@ CsvEncoder[Tree[Int]]
 case class Foo(bar: Int, baz: Float)
 
 CsvEncoder[Foo]
-
-    CsvEncoder[Foo] 
-
-
+// <console>:29: error: could not find implicit value for parameter enc: CsvEncoder[Foo]
+//        CsvEncoder[Foo]
+//                  ^
+//       
 ```
 
 失败的原因是我们没有为Float定义一个CsvEncoder隐式实例，然而这在应用中可能并不明显，但是能通过分析期望的展开序列来找到错误的原因。在错误代码之前插入一段CsvEncoder.apply或者implicitly的代码来看代码是否能够编译通过。还是以Foo类型的泛型表示为例：
 
 ```text
 CsvEncoder[Int :: Float :: HNil] 
-
-    CsvEncoder[shapeless.::[Int,shapeless.::[Float,shapeless.HNil]]] 
-
-
+// <console>:27: error: could not find implicit value for parameter enc: CsvEncoder[Int :: Float :: shapeless.HNil]
+//        CsvEncoder[Int :: Float :: HNil]
+//                  ^
 ```
 
 这段代码不能通过编译，所以需要沿着展开方向继续深入搜索问题，下一步就是尝试分析HList的各个部分。代码如下：
 
 ```text
 CsvEncoder[Int]
-
-CsvEncoder[Float] 
-
-    CsvEncoder[Float] 
-
-
+// <console>:27: error: could not find implicit value for parameter enc: CsvEncoder[Float]
+//        CsvEncoder[Float]
+//                  ^
 ```
 
 可以看到Int通过了编译，而Float未能通过，CsvEncoder\[Float\]是我们的展开树的一个叶子，所以可以补充Float的CsvEncoder隐式实例来使代码正常编译。当然如果增加了Float的CsvEncoder隐式实例仍然不能正常编译，那么我们需要继续重复上述过程直到找到下一个错误点。
 
 ### 3.5.2 使用reify进行调试 <a id="352-&#x4F7F;&#x7528;reify&#x8FDB;&#x884C;&#x8C03;&#x8BD5;"></a>
 
-scala.reflect包中提供的reify方法以Scala表达式为参数并返回一个与输入参数相对应的展开树对象（[AST](https://en.wikipedia.org/wiki/Abstract_syntax_tree)），配有类型注释。示例如下：
+scala.reflect包中提供的reify方法以Scala表达式为参数并返回一个与输入参数相对应的展开树对象（[AST](https://en.wikipedia.org/wiki/Abstract_syntax_tree) 抽象语法树），配有类型注释。示例如下：
 
 ```text
 import scala.reflect.runtime.universe._
 
 println(reify(CsvEncoder[Int])) 
 
-    $read.$iw.$iw.$iw.$iw.intEncoder))
+// Expr[CsvEncoder[Int]]($read.$iw.$iw.$iw.$iw.CsvEncoder.apply[Int]( 
+// $read.$iw.$iw.$iw.$iw.intEncoder))
 ```
 
 隐式解析过程中的类型推断能提供问题的线索。隐式解析之后，类似上面展开树对象中任何像A或者T那样的依旧存在的自定义类型都表明代码出错了。同样像Any或者Nothing那样的顶层或者底层类型也是代码出错的表现。
@@ -650,7 +647,7 @@ implicit def hnilInstance: MyTC[HNil] = ???
 
 implicit def hlistInstance[H, T <: HList](
     implicit
-    hInstance: Lazy[MyTC[H]], 
+    hInstance: Lazy[MyTC[H]], // wrap in Lazy
     tInstance: MyTC[T] 
 ): MyTC[H :: T] = ???
 ```
@@ -662,7 +659,7 @@ implicit def cnilInstance: MyTC[CNil] = ???
 
 implicit def coproductInstance[H, T <: Coproduct](
     implicit
-    hInstance: Lazy[MyTC[H]], 
+    hInstance: Lazy[MyTC[H]], // wrap in Lazy
     tInstance: MyTC[T] 
 ): MyTC[H :+: T] = ???
 ```
@@ -673,7 +670,7 @@ implicit def coproductInstance[H, T <: Coproduct](
 implicit def genericInstance[A, R]( 
     implicit
     generic: Generic.Aux[A, R],
-    rInstance: Lazy[MyTC[R]] 
+    rInstance: Lazy[MyTC[R]] // wrap in Lazy
 ): MyTC[A] = ???
 ```
 
