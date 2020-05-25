@@ -2,7 +2,7 @@
 
 我们自定义的类型类实例经常不止需要使用字段的类型，有时还希望能够使用字段名称及字段类型名称。在这一章我们将学习通过Generic的变体LabelledGeneric来实现这一点。
 
-开始之前我们先来学习一些理论知识。LabelledGeneric在类型级别使用一些小技巧来提取名称信息。要理解它我们必须先来学习一下字面类型（ literal type）、单例类型（singleton type）、幽灵类型（phantom type）和标记类型（type tagging）。
+开始之前我们先来学习一些理论知识。LabelledGeneric在类型级别使用一些小技巧来提取名称信息。要理解它我们必须先来学习一下字面类型（ literal type）、单例类型（singleton type）、幽灵类型（phantom type）和标记类型（type tagging）。（下文的标记和标签是同一个东西，我的理解是前者偏向动词后者偏向名词）
 
 ## 5.1 字面类型 <a id="51-&#x5B57;&#x9762;&#x7C7B;&#x578B;"></a>
 
@@ -10,13 +10,13 @@
 
 ```text
 "hello" : String 
-
+// res0: String = hello
 
 "hello" : AnyRef 
-
+// res1: AnyRef = hello
 
 "hello" : Any
-
+// res2: Any = hello
 ```
 
 有趣的是“hello”同样也是只有一个值的单例类型，与我们定义伴随类得到的单例类型相似。比如定义一个Foo单例类：
@@ -25,7 +25,7 @@
 object Foo
 
 Foo 
-
+// res3: Foo.type = Foo$@5c32f469
 ```
 
 Foo.type的类型是Foo，并且Foo是Foo类型的唯一值。
@@ -34,10 +34,10 @@ Foo.type的类型是Foo，并且Foo是Foo类型的唯一值。
 
 ```text
 "hello" 
-
+// res4: String = hello
 
 ("hello" : String)
-
+// res5: String = hello
 ```
 
 shapeless为使用字面类型提供了几个工具。第一，提供了一个名为narrow的宏，实现将一个字面表达式转换为一个类型单例化的字面表达式。下述代码将42这个字面量转换为Int\(42\)类型：
@@ -46,53 +46,53 @@ shapeless为使用字面类型提供了几个工具。第一，提供了一个�
 import shapeless.syntax.singleton._
 
 var x = 42.narrow 
-
+// x: Int(42) = 42
 ```
 
 注意x变量的类型Int\(42\)，它是字面类型，是Int的子类，该类只有42这一个值，如果我们给x赋其它值的话，编译器会报错。具体如下：
 
 ```text
 x = 43 
-
-
-
-
-
+// <console>:16: error: type mismatch:
+//  found   : Int(43)
+//  required: Int(42)
+//        x = 43
+//            ^
 ```
 
 然而按照普通的继承规则x仍然是一个Int类型，如果对x进行操作将得到一个标准的Int类型。代码如下：
 
 ```text
 x + 1 
-
+// res6: Int = 43
 ```
 
 在Scala中我们能在任何字面值上使用narrow。比如：
 
 ```text
 1.narrow 
-
+// res7: Int(1) = 1
 
 true.narrow 
-
+// res8: Boolean(true) = true
 
 "hello".narrow
+// res9: String("hello") = hello
 
-
-
+// and so on...
 ```
 
 但是我们并不能在复合表达式上使用narrow，否则会报错。比如：
 
 ```text
 math.sqrt(4).narrow 
-
-    not evaluate to a constant or a stable reference value 
-
-
-
-
-
+// <console>:17: error: Expression scala.math.`package`.sqrt(4.0) does 
+//    not evaluate to a constant or a stable reference value
+//        math.sqrt(4.0).narrow
+//                  ^
+// <console>:17: error: value narrow is not a member of Double 
+// math.sqrt(4.0).narrow
+//                ^
 ```
 
 Scala中的字面类型
@@ -101,6 +101,7 @@ Scala中的字面类型
 
 ```text
 val theAnswer: 42 = 42
+// theAnswer: 42 = 42
 ```
 
 “42”类型与之前输出中看到的Int\(42\)类型一致，为了向上兼容在输出中你会继续看到Int\(42\)，但是权威的语法应该是“42”。
@@ -125,7 +126,7 @@ trait Cherries
 
 ```text
 val numCherries = number.asInstanceOf[Int with Cherries]
-
+// numCherries: Int with Cherries = 42
 ```
 
 shapeless使用这一技巧实现用ADT字段名称和子类的名称的单例类型来标记字段和子类自身。为了方便shapeless提供了两种标记语法来避免像asInstanceOf这样的不友好代码。
@@ -139,8 +140,8 @@ import shapeless.syntax.singleton._
 val someNumber = 123
 
 val numCherries = "numCherries" ->> someNumber
-
-    ,Int] = 123
+// numCherries: Int with shapeless.labelled.KeyTag[String("numCherries
+//  "),Int] = 123
 ```
 
 相当于使用了下面的幽灵类型标记了someNumber：
@@ -157,7 +158,7 @@ KeyTag同时包含了字段的名称和类型，这样的结合对在Repr实例�
 import shapeless.labelled.field
 
 field[Cherries](123)
-
+// res11: shapeless.labelled.FieldType[Cherries,Int] = 123
 ```
 
 FieldType是一个类型别名，它简化了从被标记的类型中提取标记类型K以及基础类型V。FieldType定义如下：
@@ -174,7 +175,10 @@ type FieldType[K, V] = V with KeyTag[K, V]
 import shapeless.Witness
 
 val numCherries = "numCherries" ->> 123
+// numCherries: Int with shapeless.labelled.KeyTag[String("numCherries
+//  "),Int] = 123
 
+// Get the tag from a tagged value:
 
 
 def getFieldName[K, V](value: FieldType[K, V])
@@ -182,17 +186,18 @@ def getFieldName[K, V](value: FieldType[K, V])
     witness.value
 
 getFieldName(numCherries) 
+// res13: String = numCherries
 
-
+// Get the untagged type of a tagged value:
 
 def getFieldValue[K, V](value: FieldType[K, V]): V = 
     value
 
 getFieldValue(numCherries) 
-
+// res15: Int = 123
 ```
 
-一个元素被标记的HList实例，类似于一个具有一些Map相关属性的数据结构。我们能在这个过程中通过标签对字段进行处理，这些处理包含操作和替换它们以及保持所有类型和命名信息。在shapeless中称这种结构为“记录（records）”。
+如果我们构建一个带标记元素的HList，我们将获得一个具有Map属性的数据结构。我们能在这个过程中通过标记对字段进行处理，这些处理包含操作和替换它们以及保持所有类型和命名信息。在shapeless中称这种结构为“记录（records）”。
 
 ### 5.2.1 记录和LabelledGeneric <a id="521-&#x8BB0;&#x5F55;&#x548C;labelledgeneric"></a>
 
@@ -210,9 +215,9 @@ val garfield = ("cat" ->> "Garfield") :: ("orange" ->> true) :: HNil
 清晰起见，我们将garfield的类型分行写成如下形式：
 
 ```text
-
-
-
+// FieldType["cat",    String]  ::
+// FieldType["orange", Boolean] ::
+// HNil
 ```
 
 这里我们不需要深入研究记录，其实它是LabelledGeneric用来进行泛型表示所得到的结果。LabelledGeneric使用具体的ADT（尽管字段名称和类型名称被展示为Symbol类型而不是字符串）实例中相应的字段和类型名称标记乘积或余积类型中的每一个元素。shapeless对记录实现了一系列类似Map的操作，我们将在6.4节中介绍其中的一部分。现在先让我们使用LabelledGeneric派生一些类型类。
@@ -311,10 +316,10 @@ val gen = LabelledGeneric[IceCream].to(iceCream)
 可以看到生成的HList实例的类型是：
 
 ```text
-
-
-
-
+// String with KeyTag[Symbol with Tagged["name"], String] ::
+// Int with KeyTag[Symbol with Tagged["numCherries"], Int] ::
+// Boolean with KeyTag[Symbol with Tagged["inCone"], Boolean] ::
+// HNil
 ```
 
 这个对象比我们之前看到的要复杂一点，shapeless不是使用字面字符串类型表示字段名称而是使用Symbol with Tagged\["field name"\]类型来表示字段名称。实现的细节不是特别重要，我们仍然能使用Witness和FieldType来提取它们，但是得到的结果是Symbol类型而不是字符串（将来的版本也许会使用字符串作为标签）。
@@ -425,7 +430,7 @@ implicit def genericObjectEncoder[A, H <: HList](
     generic: LabelledGeneric.Aux[A, H], 
     hEncoder: Lazy[JsonObjectEncoder[H]] 
 ): JsonEncoder[A] = 
-    createObjectEncoder {value => 
+    createObjectEncoder { value => 
         hEncoder.value.encode(generic.to(value)) 
     }
 ```
@@ -435,10 +440,73 @@ implicit def genericObjectEncoder[A, H <: HList](
 ```text
 JsonEncoder[IceCream].encode(iceCream) 
 
-    numCherries,JsonNumber(1.0)), (inCone,JsonBoolean(false))))
+// res14: JsonValue = JsonObject(List((name,JsonString(Sundae)), ( 
+//  numCherries,JsonNumber(1.0)), (inCone,JsonBoolean(false))))
 ```
 
 ## 5.4 使用LabelledGeneric为余积类型派生类型类实例 <a id="54-&#x4F7F;&#x7528;labelledgeneric&#x4E3A;&#x4F59;&#x79EF;&#x7C7B;&#x578B;&#x6D3E;&#x751F;&#x7C7B;&#x578B;&#x7C7B;&#x5B9E;&#x4F8B;"></a>
+
+将LabelledGeneric与Coproducts结合使用涉及我们已经介绍的概念的混合。 首先，我们检查一下LabelledGeneric派生的Coproduct类型。 我们将从第3章重新介绍Shape ADT：
+
+```text
+import shapeless.LabelledGeneric
+
+sealed trait Shape
+final case class Rectangle(width: Double, height: Double) extends
+     Shape
+final case class Circle(radius: Double) extends Shape
+
+LabelledGeneric[Shape].to(Circle(1.0))
+// res5: Rectangle with shapeless.labelled.KeyTag[Symbol with 
+//  shapeless.tag.Tagged[String("Rectangle")],Rectangle] :+: Circle with 
+//  shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[ 
+//  String("Circle")],Circle] :+: shapeless.CNil = Inr(Inl(Circle (1.0)))
+```
+
+这是更易于阅读的Coproduct类型的格式
+
+```text
+// Rectangle with KeyTag[Symbol with Tagged["Rectangle"], Rectangle] 
+//  :+:
+// Circle with KeyTag[Symbol with Tagged["Circle"], Circle] 
+//  :+:
+// CNil
+```
+
+如您所见，结果是Shape子类型的余积，每个子类型都用类型名称标记。 我们可以使用此信息为:+:和CNil编写JsonEncoders：
+
+```text
+import shapeless.{Coproduct, :+:, CNil, Inl, Inr, Witness, Lazy} 
+import shapeless.labelled.FieldType
+
+implicit val cnilObjectEncoder: JsonObjectEncoder[CNil] = createObjectEncoder(cnil => throw new Exception("Inconceivable!"))
+
+implicit def coproductObjectEncoder[K <: Symbol, H, T <: Coproduct](implicit
+  witness: Witness.Aux[K],
+  hEncoder: Lazy[JsonEncoder[H]],
+  tEncoder: JsonObjectEncoder[T]
+): JsonObjectEncoder[FieldType[K, H] :+: T] = {
+  val typeName = witness.value.name
+  createObjectEncoder {
+    case Inl(h) =>
+      JsonObject(List(typeName -> hEncoder.value.encode(h)))
+    case Inr(t) =>
+      tEncoder.encode(t)
+  }
+}
+```
+
+coproductEncoder与hlistEncoder遵循相同的模式。我们有三个类型参数：K表示类型名称，H表示HList的头部（类型）值，T表示结尾的（类型）值。 我们在结果类型中使用FieldType和:+:来声明这三个之间的关系，并使用Witness来访问类型名称的运行时值。 结果是一个包含单个键/值对的对象，键是类型名称，值是结果：
+
+```text
+val shape: Shape = Circle(1.0)
+
+JsonEncoder[Shape].encode(shape)
+// res8: JsonValue = JsonObject(List((Circle,JsonObject(List((radius, 
+//   JsonNumber(1.0)))))))
+```
+
+其他的编码可能需要更多的工作。 例如，我们可以在输出中添加“类型”字段，甚至允许用户配置格式。Sam Halliday’s [spray-json-shapeless](https://github.com/milessabin/spray-json-shapeless)是一个出色的代码库示例，该代码库在可实现的同时还提供了极大的灵活性。
 
 ## 5.5 小结 <a id="55-&#x5C0F;&#x7ED3;"></a>
 
