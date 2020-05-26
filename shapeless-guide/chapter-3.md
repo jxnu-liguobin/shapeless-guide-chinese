@@ -295,7 +295,6 @@ implicit def genericEncoder[A](
 // parameter may only be referenced in a subsequent parameter section
 //          gen: Generic[A],
 //          ^
-
 ```
 
 导致这个问题的原因是作用域，在一个方法中，一个参数不能涉及另一个参数的类型成员。解决这个问题的最好方式是为我们的方法引入一个新的类型参数并将其关联到每一个相关的参数。代码如下：
