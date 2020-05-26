@@ -108,7 +108,7 @@ val theAnswer: 42 = 42
 
 ## 5.2 标记类型与幽灵类型 <a id="52-&#x6807;&#x8BB0;&#x7C7B;&#x578B;&#x4E0E;&#x5E7D;&#x7075;&#x7C7B;&#x578B;"></a>
 
-shapeless使用字面类型来规范模式类字段的名称，通过用字段名称的字面类型标记字段类型的方式来实现这一功能。在学习shapeless如何完成这些之前，我们先来简单实现此功能以此证明这不是什么神奇的事情。假如我们有一个数字：
+shapeless使用字面类型来规范样例类字段的名称，通过用字段名称的字面类型标记字段类型的方式来实现这一功能。在学习shapeless如何完成这些之前，我们先来简单实现此功能以此证明这不是什么神奇的事情。假如我们有一个数字：
 
 ```text
 val number = 42
@@ -129,9 +129,9 @@ val numCherries = number.asInstanceOf[Int with Cherries]
 // numCherries: Int with Cherries = 42
 ```
 
-shapeless使用这一技巧实现用ADT字段名称和子类的名称的单例类型来标记字段和子类自身。为了方便shapeless提供了两种标记语法来避免像asInstanceOf这样的不友好代码。
+shapeless使用这一技巧在ADT中使用字段名称和子类的名称的单例类型来标记字段和子类自身。为了方便shapeless提供了两种标记语法来避免像asInstanceOf这样的不友好代码。
 
-第一种是“-&gt;&gt;”，使用箭头左侧的字面表达式的单例类型来标记箭头右侧的表达式。如下代码实现使用numCherries标记someNumber变量：
+第一种语法是-&gt;&gt;，使用箭头左侧的字面表达式的单例类型来标记箭头右侧的表达式。如下代码实现使用numCherries标记someNumber变量：
 
 ```text
 import shapeless.labelled.{KeyTag, FieldType} 
@@ -150,7 +150,7 @@ val numCherries = "numCherries" ->> someNumber
 KeyTag["numCherries", Int]
 ```
 
-KeyTag同时包含了字段的名称和类型，这样的结合对在Repr实例中使用隐式解析搜索入口是有用的。
+KeyTag同时包含了字段的名称和类型，这样的结合对在Repr实例中使用隐式解析搜索入口是很有用的。
 
 第二种语法将标签作为一个类型而不是一个字面值，当我们知道要使用什么标签但是不能在代码中写出具体的字面值（即上面代码中的"numCherries"）的时候这是有用的。代码如下：
 
@@ -435,7 +435,7 @@ implicit def genericObjectEncoder[A, H <: HList](
     }
 ```
 
-这正是我们需要的，有了这些定义我们就能将任何模式类的实例输出为JSON并在结果中保存字段名称。调用代码如下：
+这正是我们需要的，有了这些定义我们就能将任何样例类的实例输出为JSON并在结果中保存字段名称。调用代码如下：
 
 ```text
 JsonEncoder[IceCream].encode(iceCream) 
