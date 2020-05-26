@@ -272,7 +272,7 @@ object sum extends Poly2 {
 
 ## 7.5 使用Poly定义类型类 <a id="75-&#x4F7F;&#x7528;poly&#x5B9A;&#x4E49;&#x7C7B;&#x578B;&#x7C7B;"></a>
 
-我们能以Poly和像Mapper、FlatMapper一样的类型类为基础，定义我们自己的类型类。作为例子，我们定义一个实现从一个模式类到另一个模式类的map操作的类型类ProductMapper。代码如下：
+我们能以Poly和像Mapper、FlatMapper一样的类型类为基础，定义我们自己的类型类。作为例子，我们定义一个实现从一个样例类到另一个样例类的map操作的类型类ProductMapper。代码如下：
 
 ```text
 trait ProductMapper[A, B, P] { 

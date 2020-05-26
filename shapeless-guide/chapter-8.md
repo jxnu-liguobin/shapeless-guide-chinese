@@ -73,7 +73,7 @@ Nat.toInt[coproductLength.Out]
 // res1: Int = 2
 ```
 
-下面让我们在具体的例子中运用类型计数。我们将创建一个SizeOf类型类来计算模式类的字段个数并返回一个Int类型。代码如下：
+下面让我们在具体的例子中运用类型计数。我们将创建一个SizeOf类型类来计算样例类的字段个数并返回一个Int类型。代码如下：
 
 ```text
 trait SizeOf[A] { 
@@ -85,7 +85,7 @@ def sizeOf[A](implicit size: SizeOf[A]): Int = size.value
 
 我们需要做三件事情来创建SizeOf的实例：
 
-1. 一个Generic来获取模式类对应的HList类型；
+1. 一个Generic来获取样例类对应的HList类型；
 2. 一个Length类型类来计算HList的元素数目并返回一个Nat类型；
 3. 一个ToInt类型类将Nat转换为Int。
 
@@ -205,7 +205,7 @@ implicit def hlistRandom[H, T <: HList](
     createRandom(() => hRandom.value.get :: tRandom.get)
 ```
 
-这样就可以得到模式类的Random实例。假设定义一个Cell模式类，并生成其随机值。代码如下：
+这样就可以得到样例类的Random实例。假设定义一个Cell样例类，并生成其随机值。代码如下：
 
 ```text
 case class Cell(col: Char, row: Int)
