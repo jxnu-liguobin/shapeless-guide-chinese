@@ -12,7 +12,7 @@ import shapeless.{Nat, Succ}
 type Zero = Nat._0 
 type One = Succ[Zero]
 type Two = Succ[One] 
-
+// etc...
 ```
 
 shapeless以Nat.\_N的方式预定义了前22个Nat。具体如下：
@@ -21,7 +21,7 @@ shapeless以Nat.\_N的方式预定义了前22个Nat。具体如下：
 Nat._1
 Nat._2
 Nat._3
-
+// etc...
 ```
 
 Nat没有运行时语义，我们必须使用ToInt类型类将Nat转换为运行时的Int。代码如下：
@@ -32,14 +32,14 @@ import shapeless.ops.nat.ToInt
 val toInt = ToInt[Two]
 
 toInt.apply() 
-
+// res7: Int = 2
 ```
 
 Nat.toInt方法为调用toInt.apply\(\)方法提供了一个方便的简写。它以隐式参数的方式接受ToInt的实例。代码如下：
 
 ```text
 Nat.toInt[Nat._3] 
-
+// res8: Int = 3
 ```
 
 ### 8.2 泛型表示的元素数目 <a id="82-&#x6CDB;&#x578B;&#x8868;&#x793A;&#x7684;&#x5143;&#x7D20;&#x6570;&#x76EE;"></a>
@@ -51,26 +51,26 @@ import shapeless._
 import shapeless.ops.{hlist, coproduct, nat}
 
 val hlistLength = hlist.Length[String :: Int :: Boolean :: HNil] 
-
-    .::[Int,shapeless.::[Boolean,shapeless.HNil]]]]{type Out = 
-    shapeless.Succ[shapeless.Succ[shapeless.Succ[shapeless._0]]]} = 
-    shapeless.ops.hlist$Length$$anon$3@264e8232
+// hlistLength: shapeless.ops.hlist.Length[String :: Int :: Boolean ::
+//    shapeless.HNil]{type Out = shapeless.Succ[shapeless.Succ[ 
+//    shapeless.Succ[shapeless._0]]]} = shapeless.ops. 
+//    hlist$Length$$anon$3@55cfe482
 
 val coproductLength = coproduct.Length[Double :+: Char :+: CNil]
-
-    shapeless.:+:[Char,shapeless.CNil]]]{type Out = shapeless.Succ[ 
-    shapeless.Succ[shapeless._0]]} = shapeless.ops. 
-    coproduct$Length$$anon$29@2f0209d9
+// coproductLength: shapeless.ops.coproduct.Length[Double :+: Char :+: 
+//    shapeless.CNil]{type Out = shapeless.Succ[shapeless.Succ[
+//    shapeless._0]]} = shapeless.ops.
+//    coproduct$Length$$anon$29@5e23a2f7
 ```
 
 Length的实例有一个类型成员Out，它以Nat类型表示结果长度。取出Int类型结果方式如下：
 
 ```text
 Nat.toInt[hlistLength.Out] 
-
+// res0: Int = 3
 
 Nat.toInt[coproductLength.Out] 
-
+// res1: Int = 2
 ```
 
 下面让我们在具体的例子中运用类型计数。我们将创建一个SizeOf类型类来计算模式类的字段个数并返回一个Int类型。代码如下：
@@ -109,7 +109,7 @@ implicit def genericSizeOf[A, L <: HList, N <: Nat](
 case class IceCream(name: String, numCherries: Int, inCone: Boolean)
 
 sizeOf[IceCream] 
-
+// res3: Int = 3
 ```
 
 ### 8.3 样例学习：随机值生成器 <a id="83-&#x6837;&#x4F8B;&#x5B66;&#x4E60;&#xFF1A;&#x968F;&#x673A;&#x503C;&#x751F;&#x6210;&#x5668;"></a>
@@ -120,14 +120,14 @@ sizeOf[IceCream]
 import org.scalacheck._
 
 for(i <- 1 to 3) println(Arbitrary.arbitrary[Int].sample) 
-
-
-
+// Some(1)
+// Some(1813066787)
+// Some(1637191929)
 
 for(i <- 1 to 3) println(Arbitrary.arbitrary[(Boolean, Byte)].sample) 
-
-
-
+// Some((true,127))
+// Some((false,83))
+// Some((false,-128))
 ```
 
 ScalaCheck为更多的标准Scala类型提供了内置的Arbitrary实例。然而为用户自定义ADT创建Arbitrary实例仍然是一个耗时的手动过程。这使得像[scalacheck-shapeless](https://github.com/alexarchambault/scalacheck-shapeless)这样使用shapeless进行整合的测试类库非常有吸引力。
@@ -147,21 +147,21 @@ def random[A](implicit r: Random[A]): A = r.get
 先来定义几个简单的Random实例。代码如下：
 
 ```text
-
+// Instance constructor:
 def createRandom[A](func: () => A): Random[A] = 
     new Random[A] { 
         def get = func()
     }
 
-
+// Random numbers from 0 to 9:
 implicit val intRandom: Random[Int] = 
     createRandom(() => scala.util.Random.nextInt(10))
 
-
+// Random characters from A to Z:
 implicit val charRandom: Random[Char] = 
     createRandom(() => ('A'.toInt + scala.util.Random.nextInt(26)).toChar)
 
-
+// Random booleans:
 implicit val booleanRandom: Random[Boolean] = 
     createRandom(() => scala.util.Random.nextBoolean)
 ```
@@ -170,14 +170,14 @@ implicit val booleanRandom: Random[Boolean] =
 
 ```text
 for(i <- 1 to 3) println(random[Int]) 
-
-
-
+// 0
+// 8
+// 9
 
 for(i <- 1 to 3) println(random[Char]) 
-
-
-
+// V
+// N
+// J
 ```
 
 #### 8.3.2 乘积类型的Random实例 <a id="832-&#x4E58;&#x79EF;&#x7C7B;&#x578B;&#x7684;random&#x5B9E;&#x4F8B;"></a>
@@ -211,11 +211,11 @@ implicit def hlistRandom[H, T <: HList](
 case class Cell(col: Char, row: Int)
 
 for(i <- 1 to 5) println(random[Cell]) 
-
-
-
-
-
+// Cell(H,1)
+// Cell(D,4)
+// Cell(D,7)
+// Cell(V,2)
+// Cell(R,4)
 ```
 
 #### 8.3.3 余积类型的Random实例 <a id="833-&#x4F59;&#x79EF;&#x7C7B;&#x578B;&#x7684;random&#x5B9E;&#x4F8B;"></a>
@@ -259,8 +259,8 @@ Random余积实例有6.75%的概率会抛出异常！多次运行就很有可能
 
 ```text
 for(i <- 1 to 100) random[Light] 
-
-
+// java.lang.Exception: Inconceivable!
+//   ...
 ```
 
 要解决这个问题就要修改选中H或T的概率，正确的分布应该是选中H的概率在1/n，n是余积类型的元素数目，这能确保余积的子类能够以相等概率被选中，也确保在只有一个子类的余积类型中能够以100%的概率选中头元素，而不会选中CNil，也就不会调用cnilProduct.get方法。下面是更新后的实现，使用coproduct.Length来计算T中元素的个数，此处用了递归的原理，因为T又会分解成新的H和T，直到CNil，据此可保证子类选择的平均分布。代码如下：
@@ -288,11 +288,11 @@ implicit def coproductRandom[H, T <: Coproduct, L <: Nat](
 
 ```text
 for(i <- 1 to 5) println(random[Light]) 
-
-
-
-
-
+// Green
+// Red
+// Red
+// Red
+// Green
 ```
 
 通常情况下为ScalaCheck生成测试数据需要大量的冗余代码，而Nat是shapeless组成的重要组件，所以对于shapeless来说生成随机值是一个非常有诱惑力的使用案例。
@@ -307,22 +307,21 @@ import shapeless._
 val hlist = 123 :: "foo" :: true :: 'x' :: HNil
 
 hlist.apply[Nat._1]
-
+// res1: String = foo
 
 hlist.apply(Nat._3)
-
+// res2: Char = x
 ```
 
 shapeless中也提供了像take、drop、slice和upadateAt的其它操作。例如：
 
 ```text
 hlist.take(Nat._3).drop(Nat._1)
-
-    :: true :: HNil
+// res3: String :: Boolean :: shapeless.HNil = foo :: true :: HNil
 
 hlist.updatedAt(Nat._1, "bar").updatedAt(Nat._2, "baz") 
-
-    shapeless.::[Char,shapeless.HNil]]]] = 123 :: bar :: baz :: x :: HNil
+// res4: Int :: String :: String :: Char :: shapeless.HNil = 123 ::
+//   bar :: baz :: x :: HNil
 ```
 
 这些操作和它们对应的类型类对于操作乘积和余积类型内部的个别元素非常有帮助。

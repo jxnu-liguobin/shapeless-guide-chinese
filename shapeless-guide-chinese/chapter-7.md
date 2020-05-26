@@ -27,7 +27,8 @@ shapeless为实现多态函数提供了一个叫做Poly的类型。简单解释�
 Poly类的核心代码是一个泛型的apply方法，它除了有一个普通A类型的参数，还接受一个Case\[P, A\]（原文为Case\[A\]）类型的隐式参数。Case和Poly的定义如下：
 
 ```text
-
+// This is not real shapeless code.
+// It's just for demonstration.
 
 trait Case[P, A] { 
     type Result 
@@ -43,7 +44,8 @@ trait Poly {
 当我们实现一个实际的Poly类的时候，需要为每一个关心的参数类型提供Case实例，Case实例的apply方法定义了对此种类型的数据做何种映射。下面代码实现了实际的函数体：
 
 ```text
-
+// This is not real shapeless code.
+// It's just for demonstration.
 
 object myPoly extends Poly { 
     implicit def intCase = 
@@ -64,7 +66,7 @@ object myPoly extends Poly {
 
 ```text
 myPoly.apply(123)
-
+// res8: Double = 61.5
 ```
 
 我们可以使用一些微妙的作用域技巧，使编译器能够自动定位Case实例而不用任何多余的引入。Case有一个额外的类型参数P，该参数引用Poly的单例类型。Case\[P, A\]的隐式作用域包括Case、P和A的伴随对象。我们把P设置为myPoly.type，myPoly.type的伴随对象就是myPoly自身。换句话说，不管在哪里调用myPoly.apply方法Poly里定义的隐式Case实例总是处在作用域内。
@@ -95,10 +97,10 @@ object myPoly extends Poly1 {
 
 ```text
 myPoly.apply(123) 
-
+// res10: myPoly.intCase.Result = 61.5
 
 myPoly.apply("hello") 
-
+// res11: myPoly.stringCase.Result = 5
 ```
 
 shapeless同样支持多个参数的Poly，下面是两个参数的例子：
@@ -113,10 +115,10 @@ object multiply extends Poly2 {
 }
 
 multiply(3, 4) 
-
+// res12: multiply.intIntCase.Result = 12
 
 multiply(3, "4") 
-
+// res13: multiply.intStrCase.Result = 444
 ```
 
 因为Case实例只是隐式值，我们能基于类型类定义Case实例并实现在前面章节介绍过的所有高级隐式解析。下面是不同上下文环境下的求数字之和的简单的例子：
@@ -139,13 +141,13 @@ object total extends Poly1 {
 }
 
 total(10) 
-
+// res15: Double = 10.0
 
 total(Option(20.0)) 
-
+// res16: Double = 20.0
 
 total(List(1L, 2L, 3L)) 
-
+// res17: Double = 6.0
 ```
 
 类型推断特质
@@ -161,20 +163,20 @@ val b: Double = a
 
 ```text
 val a: Double = myPoly.apply(123) 
-
-
-
-
-        shapeless.HNil]{type Result = ?} 
-
-
+// <console>:17: error: type mismatch;
+//  found   : Int(123)
+//  required: myPoly.ProductCase.Aux[shapeless.HNil,?] 
+//    (which expands to) shapeless.poly.Case[myPoly.type,
+//   shapeless.HNil]{type Result = ?}
+//        val a: Double = myPoly.apply(123)
+//                                         ^
 ```
 
 如果我们增加一个类型注释，编译正常。如下：
 
 ```text
 val a: Double = myPoly.apply[Int](123)
-
+// a: Double = 61.5
 ```
 
 这种行为很让人困惑和讨厌，也并没有固定的规则能让我们避免这一问题，唯一的方法就是试着不要过度约束编译器，一次只解决一个约束并在编译器报错的时候补充一点提示信息。
@@ -199,18 +201,18 @@ object sizeOf extends Poly1 {
 
 (10 :: "hello" :: true :: HNil).map(sizeOf) 
 
-    HNil]]] = 10 :: 5 :: 1 :: HNil
+// res1: Int :: Int :: Int :: shapeless.HNil = 10 :: 5 :: 1 :: HNil
 ```
 
 注意结果HList的元素类型与sizeOf里的Case实例的输出类型相匹配。只需为HList实例准备一个Poly对象，在此Poly对象中对该HList的所有类型都提供相应的Case实例，就能对该HList实例调用map函数。但是如果编译器不能为某个成员找到其对应的Case实例那么就会报错。如下：
 
 ```text
 (1.5 :: HNil).map(sizeOf) 
-
-    mapper: shapeless.ops.hlist.Mapper[sizeOf.type,shapeless.::[Double,
-    shapeless.HNil]]
-
-
+// <console>:17: error: could not find implicit value for parameter 
+//    mapper: shapeless.ops.hlist.Mapper[sizeOf.type,Double :: 
+//    shapeless.HNil]
+// (1.5 :: HNil).map(sizeOf) 
+//                  ^
 ```
 
 我们也能对HList实例进行flatMap操作，只要在定义的Poly实例中使每一个Case实例返回的是HList类型即可。代码如下：
@@ -229,19 +231,20 @@ object valueAndSizeOf extends Poly1 {
 
 (10 :: "hello" :: true :: HNil).flatMap(valueAndSizeOf) 
 
-    .::[Int,shapeless.::[Boolean,shapeless.::[Int,shapeless.HNil]]]]]] 
-    = 10 :: 10 :: hello :: 5 :: true :: 1 :: HNil
+// res3: Int :: Int :: String :: Int :: Boolean :: Int :: shapeless.
+//    HNil = 10 :: 10 :: hello :: 5 :: true :: 1 :: HNil
 ```
 
 再次强调，如果调用flatMap的HList实例有某个元素类型所对应的Case实例没有定义或者其对应的Case实例返回的结果不是HList类型那么编译器就会报错。如下：
 
 ```text
-
+// Using the wrong Poly with flatMap:
 (10 :: "hello" :: true :: HNil).flatMap(sizeOf) 
-    mapper: shapeless.ops.hlist.FlatMapper[sizeOf.type,shapeless.::[Int 
-    ,shapeless.::[String,shapeless.::[Boolean,shapeless.HNil]]]] 
-
-
+// <console>:18: error: could not find implicit value for parameter
+//    mapper: shapeless.ops.hlist.FlatMapper[sizeOf.type,Int :: String
+//    :: Boolean :: shapeless.HNil]
+//         (10 :: "hello" :: true :: HNil).flatMap(sizeOf)
+//                                 ^
 ```
 
 map和flatMap分别基于Mapper和FlatMapper类型类，我们将在7.5节中看到一个直接使用Mapper进行操作的例子。
@@ -262,7 +265,7 @@ object sum extends Poly2 {
 }
 
 (10 :: "hello" :: 100 :: HNil).foldLeft(0)(sum) 
-
+// res7: Int = 115
 ```
 
 同样还能完成reduceLeft、reduceRight、foldMap等操作，每一个操作都有与之相对应的类型类，我们将把研究这些可用的操作作为练习留给读者。
@@ -329,7 +332,7 @@ case class IceCream1(name: String, numCherries: Int, inCone: Boolean)
 case class IceCream2(name: String, hasCherries: Boolean, numCones: Int)
 
 IceCream1("Sundae", 1, false).mapTo[IceCream2](conversions)
-
+// res2: IceCream2 = IceCream2(Sundae,true,0)
 ```
 
 mapTo语法看上去像一个单一的调用，但实际上是两次：一次调用mapTo确定B类型参数，另一次调用Builder.apply方法来指定Poly的类型。一些shapeless的内置的ops扩展方法使用相似的技巧为用户提供方便。
