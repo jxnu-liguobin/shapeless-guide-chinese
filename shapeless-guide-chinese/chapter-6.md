@@ -48,21 +48,20 @@ object Last {
 import shapeless._
 
 ("Hello" :: 123 :: true :: HNil).last 
-
+// res0: Boolean = true
 
 ("Hello" :: 123 :: true :: HNil).init 
-
-    :: 123 :: HNil
+// res1: String :: Int :: shapeless.HNil = Hello :: 123 :: HNil
 ```
 
 第二，这些类型类只能用在至少包含一个元素的HList实例，使得在一定程度上具有对代码进行检查的功能。当我们尝试对一个空的HList调用last方法，编译器会直接报错。如下：
 
 ```text
 HNil.last 
-
-    .HNil.type]. shapeless.HNil.type is empty, so there is no last element.
-
-
+// <console>:16: error: Implicit not found: shapeless.Ops.Last[ shapeless.HNil.type]. 
+//    shapeless.HNil.type is empty, so there is no last element.
+//        HNil.last
+//             ^
 ```
 
 ## 6.2 创建一个自定义的“操作”（引理（lemma）模式） <a id="62-&#x521B;&#x5EFA;&#x4E00;&#x4E2A;&#x81EA;&#x5B9A;&#x4E49;&#x7684;&#x64CD;&#x4F5C;&#xFF08;&#x5F15;&#x7406;&#xFF08;lemma&#xFF09;&#x6A21;&#x5F0F;&#xFF09;"></a>
@@ -113,7 +112,7 @@ type BigList = String :: Int :: Boolean :: Double :: HNil
 val bigList: BigList = "foo" :: 123 :: true :: 456.0 :: HNil
 
 Penultimate[BigList].apply(bigList) 
-
+// res4: Boolean = true
 ```
 
 获取Penultimate实例需要编译器同时完成获取Last和Init的实例，所以对于长度不满足的HList继承了与Last和Init的同一类型检查标准。代码如下：
@@ -124,10 +123,9 @@ type TinyList = String :: HNil
 val tinyList = "bar" :: HNil
 
 Penultimate[TinyList].apply(tinyList) 
-
-    Penultimate[TinyList] 
-
-
+// <console>:21: error: could not find implicit value for parameter p: Penultimate[TinyList]
+//        Penultimate[TinyList].apply(tinyList)
+//                   ^
 ```
 
 对于底层用户我们可以为HList定义扩展方法，使调用变的更容易。代码如下：
@@ -139,7 +137,7 @@ implicit class PenultimateOps[A](a: A) {
 }
 
 bigList.penultimate 
-
+// res7: Boolean = true
 ```
 
 通过提供一个基于Generic的实例就可以为所有的乘积类型提供Penultimate类型类操作。代码如下：
@@ -159,7 +157,7 @@ implicit def genericPenultimate[A, R, O](
 case class IceCream(name: String, numCherries: Int, inCone: Boolean)
 
 IceCream("Sundae", 1, false).penultimate 
-
+// res9: Int = 1
 ```
 
 重要的是通过定义Penultimate类型类，我们创建了一个可以在任何地方复用的工具。shapeless为各种各样的目的提供了相应的“操作”，我们把自己定义的“操作”添加到工具箱里也很容易。
@@ -175,13 +173,13 @@ case class IceCreamV1(name: String, numCherries: Int, inCone: Boolean)
 我们的迁移类库应该能够自由的实现手工升级。比如现有以下的后续版本的模式类：
 
 ```text
-
+// Remove fields:
 case class IceCreamV2a(name: String, inCone: Boolean)
 
-
+// Reorder fields:
 case class IceCreamV2b(name: String, inCone: Boolean, numCherries: Int)
 
-
+// Insert fields (provided we can determine a default value):
 case class IceCreamV2c(name: String, inCone: Boolean, numCherries: Int, numWaffles: Int)
 ```
 
@@ -241,17 +239,17 @@ implicit def genericMigration[A, B, ARepr <: HList, BRepr <: HList](
 
 ```text
 IceCreamV1("Sundae", 1, true).migrateTo[IceCreamV2a] 
-
+// res6: IceCreamV2a = IceCreamV2a(Sundae,true)
 ```
 
 但是如果我们尝试迁移字段不完全匹配的类型，编译器就会报错。比如将IceCreamV1迁移到IceCreamV2b就会造成下面的结果：
 
 ```text
 IceCreamV1("Sundae", 1, true).migrateTo[IceCreamV2b] 
-
-    migration: Migration[IceCreamV1,IceCreamV2b]
-
-
+// <console>:23: error: could not find implicit value for parameter
+//    migration: Migration[IceCreamV1,IceCreamV2b]
+//         IceCreamV1("Sundae", 1, true).migrateTo[IceCreamV2b] 
+//                                        ^
 ```
 
 ### 6.3.2 第二步：调整字段顺序 <a id="632-&#x7B2C;&#x4E8C;&#x6B65;&#xFF1A;&#x8C03;&#x6574;&#x5B57;&#x6BB5;&#x987A;&#x5E8F;"></a>
@@ -279,20 +277,20 @@ implicit def genericMigration[
 
 ```text
 IceCreamV1("Sundae", 1, true).migrateTo[IceCreamV2a] 
-
+// res8: IceCreamV2a = IceCreamV2a(Sundae,true)
 
 IceCreamV1("Sundae", 1, true).migrateTo[IceCreamV2b] 
-
+// res9: IceCreamV2b = IceCreamV2b(Sundae,true,1)
 ```
 
 然而，如果我们尝试对添加字段的类型进行迁移，还是会报错。比如将IceCreamV1转化为IceCreamV2c的结果如下：
 
 ```text
 IceCreamV1("Sundae", 1, true).migrateTo[IceCreamV2c] 
-
-     migration: Migration[IceCreamV1,IceCreamV2c]
-
-
+// <console>:25: error: could not find implicit value for parameter
+//    migration: Migration[IceCreamV1,IceCreamV2c]
+//         IceCreamV1("Sundae", 1, true).migrateTo[IceCreamV2c] 
+//                                                ^
 ```
 
 ### 6.3.4 第三步：增加字段 <a id="634-&#x7B2C;&#x4E09;&#x6B65;&#xFF1A;&#x589E;&#x52A0;&#x5B57;&#x6BB5;"></a>
@@ -376,13 +374,13 @@ implicit def genericMigration[
 
 ```text
 IceCreamV1("Sundae", 1, true).migrateTo[IceCreamV2a] 
-
+// res14: IceCreamV2a = IceCreamV2a(Sundae,true)
 
 IceCreamV1("Sundae", 1, true).migrateTo[IceCreamV2b] 
-
+// res15: IceCreamV2b = IceCreamV2b(Sundae,true,1)
 
 IceCreamV1("Sundae", 1, true).migrateTo[IceCreamV2c] 
-
+// res16: IceCreamV2c = IceCreamV2c(Sundae,true,1,0)
 ```
 
 我们能使用ops类型类来完成的功能是非常神奇的。只为Migration类型类定义一个隐式方法——genericMigration，它的具体实现也只有一行代码——即可完成在任何两个模式类之间进行自动迁移。使用标准的类库我们能以与此差不多的代码量写出处理单独一对类型的迁移工具。这就是shapeless的强大之处！
@@ -399,12 +397,12 @@ import shapeless._
 case class IceCream(name: String, numCherries: Int, inCone: Boolean)
 
 val sundae = LabelledGeneric[IceCream]. to(IceCream("Sundae", 1, false)) 
-
-    with shapeless.tag.Tagged[String("name")],String],shapeless.::[Int 
-    with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[ 
-    String("numCherries")],Int],shapeless.::[Boolean with shapeless. 
-    labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("inCone")], 
-    Boolean],shapeless.HNil]]] = Sundae :: 1 :: false :: HNil
+// sundae: String with shapeless.labelled.KeyTag[Symbol with shapeless
+//    .tag.Tagged[String("name")],String] :: Int with shapeless. 
+//    labelled.KeyTag[Symbol with shapeless.tag.Tagged[String(" 
+//    numCherries")],Int] :: Boolean with shapeless.labelled.KeyTag[
+//     Symbol with shapeless.tag.Tagged[String("inCone")],Boolean] :: 
+//     shapeless.HNil = Sundae :: 1 :: false :: HNil
 ```
 
 不像我们之前已经看到的HList和Coproduct操作，record ops语法需要对shapeless.record包进行显式引入。代码如下：
@@ -419,25 +417,25 @@ get扩展方法和它的对应的Selector类型类允许我们根据标签来获
 
 ```text
 sundae.get('name) 
-
+// res1: String = Sundae
 
 sundae.get('numCherries) 
-
+// res2: Int = 1
 ```
 
 获取未定义的字段会导致编译错误。具体如下：
 
 ```text
 sundae.get('nomCherries) 
-
-    ("nomCherries")] in record shapeless.::[String with shapeless. 
-    labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("name")], 
-    String],shapeless.::[Int with shapeless.labelled.KeyTag[Symbol with 
-    shapeless.tag.Tagged[String("numCherries")],Int],shapeless.::[
-    Boolean with shapeless.labelled.KeyTag[Symbol with shapeless.tag. 
-    Tagged[String("inCone")],Boolean],shapeless.HNil]]]
-
-
+// <console>:20: error: No field Symbol with shapeless.tag.Tagged[ 
+//    String("nomCherries")] in record String with shapeless.labelled. 
+//    KeyTag[Symbol with shapeless.tag.Tagged[String("name")],String] :: 
+//    Int with shapeless.labelled.KeyTag[Symbol with shapeless.tag. 
+//    Tagged[String("numCherries")],Int] :: Boolean with shapeless. l
+//    abelled.KeyTag[Symbol with shapeless.tag.Tagged[String("inCone") 
+//    ],Boolean] :: shapeless.HNil
+//  sundae.get('nomCherries)
+//            ^
 ```
 
 ### 6.4.2 更新和删除字段 <a id="642-&#x66F4;&#x65B0;&#x548C;&#x5220;&#x9664;&#x5B57;&#x6BB5;"></a>
@@ -447,18 +445,18 @@ updated方法和Updater类型类允许我们根据key值来修改字段。remove
 ```text
 sundae.updated('numCherries, 3) 
 // res4: shapeless.::[String with shapeless.labelled.KeyTag[Symbol with 
-    shapeless.tag.Tagged[String("name")],String],shapeless.::[Int with 
-    shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String(" 
-    numCherries")],Int],shapeless.::[Boolean with shapeless.labelled. 
-    KeyTag[Symbol with shapeless.tag.Tagged[String("inCone")],Boolean], 
-    shapeless.HNil]]] = Sundae :: 3 :: false :: HNil
+//    shapeless.tag.Tagged[String("name")],String],shapeless.::[Int with 
+//    shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String(" 
+//    numCherries")],Int],shapeless.::[Boolean with shapeless.labelled. 
+//    KeyTag[Symbol with shapeless.tag.Tagged[String("inCone")],Boolean], 
+//    shapeless.HNil]]] = Sundae :: 3 :: false :: HNil
 
 sundae.remove('inCone) 
 // res5: (Boolean, shapeless.::[String with shapeless.labelled.KeyTag[ 
-    Symbol with shapeless.tag.Tagged[String("name")],String],shapeless 
-    .::[Int with shapeless.labelled.KeyTag[Symbol with shapeless.tag. 
-    Tagged[String("numCherries")],Int],shapeless.HNil]]) = (false, 
-    Sundae :: 1 :: HNil)
+//    Symbol with shapeless.tag.Tagged[String("name")],String],shapeless 
+//    .::[Int with shapeless.labelled.KeyTag[Symbol with shapeless.tag. 
+//    Tagged[String("numCherries")],Int],shapeless.HNil]]) = (false, 
+//    Sundae :: 1 :: HNil)
 ```
 
 updateWith方法和Modifier类型类允许我们传\#x4F20;入一个更新函数来修改字段。以下代码实现将name字段更新为“MASSIVE ”加其原始值：
@@ -466,11 +464,11 @@ updateWith方法和Modifier类型类允许我们传\#x4F20;入一个更新函数
 ```text
 sundae.updateWith('name)("MASSIVE " + _) 
 // res6: shapeless.::[String with shapeless.labelled.KeyTag[Symbol with 
-    shapeless.tag.Tagged[String("name")],String],shapeless.::[Int with 
-    shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String(" 
-    numCherries")],Int],shapeless.::[Boolean with shapeless.labelled. 
-    KeyTag[Symbol with shapeless.tag.Tagged[String("inCone")],Boolean], 
-    shapeless.HNil]]] = MASSIVE Sundae :: 1 :: false :: HNil
+//    shapeless.tag.Tagged[String("name")],String],shapeless.::[Int with 
+//    shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String(" 
+//    numCherries")],Int],shapeless.::[Boolean with shapeless.labelled. 
+//    KeyTag[Symbol with shapeless.tag.Tagged[String("inCone")],Boolean], 
+//    shapeless.HNil]]] = MASSIVE Sundae :: 1 :: false :: HNil
 ```
 
 ### 6.4.3 转换为普通的Map对象 <a id="643-&#x8F6C;&#x6362;&#x4E3A;&#x666E;&#x901A;&#x7684;map&#x5BF9;&#x8C61;"></a>
@@ -479,9 +477,9 @@ toMap方法和ToMap类型类可以将一个记录转换为Map对象。代码如�
 
 ```text
 sundae.toMap
-
-    String("numCherries") with String("name") <: String],Any] = Map(' 
-    inCone -> false, 'numCherries -> 1, 'name -> Sundae)
+// res7: Map[Symbol with shapeless.tag.Tagged[_ >: String("inCone") 
+//    with String("numCherries") with String("name") <: String],Any] = 
+//    Map('inCone -> false, 'numCherries -> 1, 'name -> Sundae)
 ```
 
 ### 6.4.4 其它操作 <a id="644-&#x5176;&#x5B83;&#x64CD;&#x4F5C;"></a>
