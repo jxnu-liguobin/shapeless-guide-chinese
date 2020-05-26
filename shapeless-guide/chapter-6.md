@@ -235,7 +235,7 @@ implicit def genericMigration[A, B, ARepr <: HList, BRepr <: HList](
 }
 ```
 
-花一点时间仔细研究一下shapeless源码中的Intersection类型（见[https://github.com/milessabin/shapeless/blob/shapeless-2.3.2/core/src/main/scala/shapeless/ops/hlists.scala\#L1297-L1352](https://github.com/milessabin/shapeless/blob/shapeless-2.3.2/core/src/main/scala/shapeless/ops/hlists.scala#L1297-L1352)）。它的Aux类型别名有三个参数：两个HList类型的输入和二者相交的HList类型的输出。上述样例代码中我们将ARepr和BRepr指定为输入类型、BRepr指定为输出类型，这意味着只有在B的字段完全是A中的字段的子集的时候隐式解析才能成功，此处完全指的是名称和顺序均需一致。将IceCreamV1迁移到IceCreamV2a的代码如下：
+shapeless源码中的Intersection类型（见[https://github.com/milessabin/shapeless/blob/shapeless-2.3.2/core/src/main/scala/shapeless/ops/hlists.scala\#L1297-L1352](https://github.com/milessabin/shapeless/blob/shapeless-2.3.2/core/src/main/scala/shapeless/ops/hlists.scala#L1297-L1352)）。它的Aux类型别名有三个参数：两个HList类型的输入和二者相交的HList类型的输出。上述样例代码中我们将ARepr和BRepr指定为输入类型、BRepr指定为输出类型，这意味着只有在B的字段完全是A中的字段的子集的时候隐式解析才能成功，此处完全指的是名称和顺序均需一致。将IceCreamV1迁移到IceCreamV2a的代码如下：
 
 ```text
 IceCreamV1("Sundae", 1, true).migrateTo[IceCreamV2a] 
@@ -249,7 +249,7 @@ IceCreamV1("Sundae", 1, true).migrateTo[IceCreamV2b]
 // <console>:23: error: could not find implicit value for parameter
 //    migration: Migration[IceCreamV1,IceCreamV2b]
 //         IceCreamV1("Sundae", 1, true).migrateTo[IceCreamV2b] 
-//                                        ^
+//                                       ^
 ```
 
 ### 6.3.2 第二步：调整字段顺序 <a id="632-&#x7B2C;&#x4E8C;&#x6B65;&#xFF1A;&#x8C03;&#x6574;&#x5B57;&#x6BB5;&#x987A;&#x5E8F;"></a>
@@ -401,8 +401,8 @@ val sundae = LabelledGeneric[IceCream]. to(IceCream("Sundae", 1, false))
 //    .tag.Tagged[String("name")],String] :: Int with shapeless. 
 //    labelled.KeyTag[Symbol with shapeless.tag.Tagged[String(" 
 //    numCherries")],Int] :: Boolean with shapeless.labelled.KeyTag[
-//     Symbol with shapeless.tag.Tagged[String("inCone")],Boolean] :: 
-//     shapeless.HNil = Sundae :: 1 :: false :: HNil
+//    Symbol with shapeless.tag.Tagged[String("inCone")],Boolean] :: 
+//    shapeless.HNil = Sundae :: 1 :: false :: HNil
 ```
 
 不像我们之前已经看到的HList和Coproduct操作，record ops语法需要对shapeless.record包进行显式引入。代码如下：

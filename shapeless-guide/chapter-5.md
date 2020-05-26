@@ -182,16 +182,14 @@ val numCherries = "numCherries" ->> 123
 
 
 def getFieldName[K, V](value: FieldType[K, V])
-    (implicit witness: Witness.Aux[K]): K =
-    witness.value
+    (implicit witness: Witness.Aux[K]): K = witness.value
 
 getFieldName(numCherries) 
 // res13: String = numCherries
 
 // Get the untagged type of a tagged value:
 
-def getFieldValue[K, V](value: FieldType[K, V]): V = 
-    value
+def getFieldValue[K, V](value: FieldType[K, V]): V = value
 
 getFieldValue(numCherries) 
 // res15: Int = 123
@@ -306,11 +304,11 @@ import shapeless.LabelledGeneric
 
 val gen = LabelledGeneric[IceCream].to(iceCream) 
 // gen: shapeless.::[String with shapeless.labelled.KeyTag[Symbol with 
-    shapeless.tag.Tagged[String("name")],String],shapeless.::[Int with 
-    shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String(" 
-    numCherries")],Int],shapeless.::[Boolean with shapeless.labelled. 
-    KeyTag[Symbol with shapeless.tag.Tagged[String("inCone")],Boolean], 
-    shapeless.HNil]]] = Sundae :: 1 :: false :: HNil
+//    shapeless.tag.Tagged[String("name")],String],shapeless.::[Int with 
+//    shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String(" 
+//    numCherries")],Int],shapeless.::[Boolean with shapeless.labelled. 
+//    KeyTag[Symbol with shapeless.tag.Tagged[String("inCone")],Boolean], 
+//    shapeless.HNil]]] = Sundae :: 1 :: false :: HNil
 ```
 
 可以看到生成的HList实例的类型是：
@@ -452,8 +450,7 @@ JsonEncoder[IceCream].encode(iceCream)
 import shapeless.LabelledGeneric
 
 sealed trait Shape
-final case class Rectangle(width: Double, height: Double) extends
-     Shape
+final case class Rectangle(width: Double, height: Double) extends Shape
 final case class Circle(radius: Double) extends Shape
 
 LabelledGeneric[Shape].to(Circle(1.0))

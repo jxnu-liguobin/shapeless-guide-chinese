@@ -438,8 +438,6 @@ writeCsv(shapes)
 // <console>:26: error: could not find implicit value for parameter encoder: CsvEncoder[Shape]
 //        writeCsv(shapes)
 //                ^
-
-
 ```
 
 不幸的是，代码报错了，报的错误与3.2.3节中介绍的一样，毫无线索。经过分析可以知道失败的原因是我们并没有为Double类型定义CsvEncoder隐式实例。解决方案很简单，定义一个就可以了。代码如下：
