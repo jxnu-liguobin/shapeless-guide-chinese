@@ -17,7 +17,7 @@
 
 在专有名词ADT中，我们称“矩形和圆形”中的这种“和”为乘积（product）（个人觉得此处他应该是指“宽和高”中的和），“一个图形的形状是矩形或圆形”这种“或”为余积（coproduct）。Scala中通常用样例类代表乘积类型，用密封特质代表余积类型。例如下述中Rectangle和Circle都是乘积类型，而Shape是余积类型：
 
-```text
+```scala
 sealed trait Shape 
 final case class Rectangle(width: Double, height: Double) extends Shape 
 final case class Circle(radius: Double) extends Shape
@@ -28,7 +28,7 @@ val circ: Shape = Circle(1.0)
 
 ADT之美就在于它是类型安全的。编译器能够完全理解我们定义的代号（alberas的意思是：像矩形和圆这种我们定义的符号；以及这些符号的操作规则或编码方法规则），所以这能帮助我们对自定义类型写出完整的、类型正确的方法。如下代码能正确处理传入的shape类型并计算其面积：
 
-```text
+```scala
 def area(shape: Shape): Double = 
     shape match {
         case Rectangle(w, h) => w * h 
@@ -46,7 +46,7 @@ area(circ)
 
 虽然在Scala中编码方式不止一种，但密封特质和样例类毋庸置疑是ADT的最方便的编码方式。比如Scala标准库中就提供了用元组（Tuple）表式的泛型乘积类型以及用或（Either）表示的泛型余积类型。我们可以用这种方式来重写上面定义的Shape类。代码如下：
 
-```text
+```scala
 type Rectangle2 = (Double, Double)
 type Circle2 = Double 
 type Shape2 = Either[Rectangle2, Circle2]
@@ -57,7 +57,7 @@ val circ2: Shape2 = Right(1.0)
 
 尽管这种编码方式没有上面介绍的样例类的方式易读，却有着相同的理念，我们仍然能写出对于Shape2的类型安全的操作方法。代码如下：
 
-```text
+```scala
 def area2(shape: Shape2): Double =
     shape match {
         case Left((w, h)) => w * h 
@@ -86,7 +86,7 @@ shapeless在这两种定义方式中都做的很好：默认情况下我们能�
 
 HList可以是一个空列表HNil也可以是一对::\[H, T\]，其中H是任意类型，T是另一个HList。因为每一个::类型都有H和T，所以HList中的每一个元素都是独立的。如下：
 
-```text
+```scala
 import shapeless.{HList, ::, HNil}
 
 val product: String :: Int :: Boolean :: HNil = 
@@ -95,7 +95,7 @@ val product: String :: Int :: Boolean :: HNil =
 
 上述中的HList的类型和值相互对应，其对应了三种类型：字符串、整型和布尔。我们能提取头和尾元素及其类型。代码如下：
 
-```text
+```scala
 val first = product.head 
 // first: String = Sunday
 
@@ -108,7 +108,7 @@ val rest = product.tail.tail
 
 编译器知道每一个HList对象的准确长度，所以如果取空列表的head和tail就会造成编译错误。如下：
 
-```text
+```scala
 product.tail.tail.tail.head 
 // <console>:15: error: could not find implicit value for 
 // parameter c: shapeless.ops.hlist.IsHCons[shapeless.HNil]
@@ -118,7 +118,7 @@ product.tail.tail.tail.head
 
 我们能对HList对象进行操纵和转换，还包括检查和遍历。例如，我们能用::方法将元素插入到列表的最前端。再次注意，元素个数及元素具体类型是如何反映到结果中的（下面将42L通过::与product相连接，可以看到返回的newProduct的元素个数及元素具体类型）。如下：
 
-```text
+```scala
 val newProduct = 42L :: product
 //Long :: String :: Int :: Boolean :: HNil
 ```
@@ -131,7 +131,7 @@ HList对象的这些行为一点也不神奇，我们已经用\(A, B\)元组以�
 
 shapeless提供了一个叫Generic的类型类，它可以在具体的ADT对象和其泛型表示对象之间进行相互转换。得益于一些幕后的宏魔法，使得我们无需冗余代码即可获取Generic实例。如下实现获取IceCream类的Generic对象：
 
-```text
+```scala
 import shapeless.Generic
 
 case class IceCream(name: String, numCherries: Int, inCone: Boolean)
@@ -144,7 +144,7 @@ val iceCreamGen = Generic[IceCream]
 
 注意Generic实例有一个Repr类型成员，Repr是Generic实例的泛型表示的类型。上面的代码中iceCreamGen实例的Repr类型为String :: Int :: Boolean :: HNil。Generic实例有两个方法：一个将原始对象转换为Repr类型，另一个将Repr类型转为原始对象。如下：
 
-```text
+```scala
 val iceCream = IceCream("Sundae", 1, false)
 // iceCream: IceCream = IceCream(Sundae,1,false)
 
@@ -157,7 +157,7 @@ val iceCream2 = iceCreamGen.from(repr)
 
 如果两个ADT对象Repr类型相同，则我们可以使用它们的Generic实例进行相互转换。如下实现Employee和IceCream对象之间的转换：
 
-```text
+```scala
 case class Employee(name: String, number: Int, manager: Boolean)
 
 // Create an employee from an ice cream:
@@ -169,7 +169,7 @@ val employee = Generic[Employee].from(Generic[IceCream].to(iceCream))
 >
 > 值得注意的是在Scala中Tuple实际上也是一种样例类，所以Generic也能应用于Tuple。如下：
 >
-> ```text
+> ```scala
 > val tupleGen = Generic[(String, Int, Boolean)]
 >
 > tupleGen.to(("Hello", 123, true)) 
@@ -181,7 +181,7 @@ val employee = Generic[Employee].from(Generic[IceCream].to(iceCream))
 >
 > Generic也能用于超过22个字段的样例类。如下：
 >
-> ```text
+> ```scala
 > case class BigData( 
 >     a:Int,b:Int,c:Int,d:Int,e:Int,f:Int,g:Int,h:Int,i:Int,j:Int, 
 >     k:Int,l:Int,m:Int,n:Int,o:Int,p:Int,q:Int,r:Int,s:Int,t:Int, 
@@ -199,7 +199,7 @@ val employee = Generic[Employee].from(Generic[IceCream].to(iceCream))
 
 我们已经学习了shapeless如何编码乘积类型，那么余积类型是怎么样的？之前我们学习了使用Either的操作方式，但是它跟元组有相同的缺点。因此，shapeless也提供了与HList相似的编码方式，名为Coproduct。如下：
 
-```text
+```scala
 import shapeless.{Coproduct, :+:, CNil, Inl, Inr}
 
 case class Red() 
@@ -211,7 +211,7 @@ type Light = Red :+: Amber :+: Green :+: CNil
 
 简单来说余积的形式是A :+: B :+: C :+: CNil，其意思是“A或B或C”，“:+:”可以被近似地解释为Either。一个余积的总类型编码了所有可能类型，但是每一个具体的余积实例只是其中的一种类型。“:+:”有两个子类：Inl和Inr，与Left和Right相似。通过嵌套Inl和Inr的构造函数来创建一个余积实例。如下：
 
-```text
+```scala
 val red: Light = Inl(Red())
 // red: Light = Inl(Red())
 
@@ -227,7 +227,7 @@ val green: Light = Inr(Inr(Inl(Green())))
 
 余积类型看似很难解析，然而我们能看到它们非常适合较大的泛型编码场景。除了能解析样例类和样例对象，shapeless的Generic类型类还能解析密封特质和抽象类。如下代码将Generic应用于密封特质：
 
-```text
+```scala
 import shapeless.Generic
 
 sealed trait Shape 
@@ -242,7 +242,7 @@ val gen = Generic[Shape]
 
 Shape的Generic实例（gen）的Repr类型是“Rectangle :+: Circle :+: CNil”，它是密封特质Shape的子类的余积。我们能用gen的to和from方法在Shape的子类实例和gen.Repr之间进行相互转换。代码如下：
 
-```text
+```scala
 gen.to(Rectangle(3.0, 4.0))
 // res3: gen.Repr = Inl(Rectangle(3.0,4.0))
 

@@ -10,7 +10,7 @@
 
 然而有时类型又太具体导致大量重复编码，所以有些情形下我们想利用不同类型之间的相似性来去除重复编码工作。例如，考虑以下两个类型定义：
 
-```text
+```scala
 case class Employee(name: String, number: Int, manager: Boolean)
 
 case class IceCream(name: String, numCherries: Int, inCone: Boolean)
@@ -18,7 +18,7 @@ case class IceCream(name: String, numCherries: Int, inCone: Boolean)
 
 这两个类代表不同的数据类型，但是它们又非常相似——都包含三个字段且类型相同。假设我们要实现一个对它们都通用的操作，例如序列化到CSV文件。尽管这两类数据相似，但是我们不得不写两个不同的方法。分别如下：
 
-```text
+```scala
 def employeeCsv(e: Employee): List[String] = 
     List(e.name, e.number.toString, e.manager.toString)
 
@@ -30,7 +30,7 @@ def iceCreamCsv(c: IceCream): List[String] =
 
 比如，我们能用如下代码将Employee和IceCream实例转换成同一类型。如果不理解以下代码也不用担心，本书会在接下来的章节中详细介绍它们。
 
-```text
+```scala
 import shapeless._
 
 val genericEmployee = Generic[Employee].to(Employee("Dave", 123, false)) 
@@ -44,7 +44,7 @@ val genericIceCream = Generic[IceCream].to(IceCream("Sundae", 1, false))
 
 现在两个值变成了相同类型，都是异构的列表（简称HList），它包含一个字符串（String）、一个整型（Int）和一个布尔（Boolean）对象。接下来我们将研究HList类型和它在shapeless中所扮演的重要角色。目前为止关键在于用同一个函数来序列化各自的值，而这些值是上面两种类型被泛型化后的值。代码如下：
 
-```text
+```scala
 def genericCsv(gen: String :: Int :: Boolean :: HNil): List[String] = 
     List(gen(0), gen(1).toString, gen(2).toString)
 
@@ -86,7 +86,7 @@ genericCsv(genericIceCream)
 
 本书中大多数示例都使用了2.12.1，这个版本的Scala引入了中缀类型表示，类型在控制台的输出将会更加清晰，如下：
 
-```text
+```scala
 val repr = "Hello" :: 123 :: true :: HNil
 // repr: String :: Int :: Boolean :: shapeless.HNil = Hello :: 123 ::
 // true :: HNil
@@ -94,7 +94,7 @@ val repr = "Hello" :: 123 :: true :: HNil
 
 而如果你使用的是旧版本的Scala，你将会看到前缀类型表示，就像下面这样：
 
-```text
+```scala
 val repr = "Hello" :: 123 :: true :: HNil
 // repr: shapeless.::[String,shapeless.::[Int,shapeless.::[Boolean,
 // shapeless.HNil]]] = "Hello" :: 123 :: true :: HNil
@@ -102,7 +102,7 @@ val repr = "Hello" :: 123 :: true :: HNil
 
 不要恐慌，除了结果的打印形式不同（中缀和前缀的语法）之外，这些类型是相同的。如果您发现前缀类型表示难以阅读，我们建议将Scala升级到较新的版本，只需要添加以下内容在build.sbt中：
 
-```text
+```scala
  scalaOrganization := "org.typelevel" 
  //scalaOrganization只支持0.13.13+，可在project/build.properties修改
  scalaVersion := "2.12.1"

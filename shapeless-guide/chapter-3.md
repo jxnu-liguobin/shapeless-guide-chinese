@@ -8,7 +8,7 @@
 
 类型类是一种从Haskell中借用的编码模式，在Haskell中“类”这个词没有像面向对象编程语言中的实际意义。Scala中使用特质和隐式声明的方式来实现类型类。类型类是带类型参数的特质，是对一些通用功能的分类，使其可以被应用到多种类型。如下创建一个CsvEncoder类型类，实现将A类型实例转换为CSV文件中的一行：
 
-```text
+```scala
 trait CsvEncoder[A] {
     def encode(value: A): List[String]
 }
@@ -16,7 +16,7 @@ trait CsvEncoder[A] {
 
 我们为每一个关心的类型实现此类型类实例，如果想让这些实例在我们的作用域内能被自动引入，可以将其放在类型类对应的伴随对象中，或者放到一个独立的库中，由用户手动导入。如下代码实现为Employee对象定义一个隐式CsvEncoder实例——employeeEncoder：
 
-```text
+```scala
 // Custom data type:
 case class Employee(name: String, number: Int, manager: Boolean)
 
@@ -34,14 +34,14 @@ implicit val employeeEncoder: CsvEncoder[Employee] =
 
 我们使用implicit关键词标记每一个实例，并定义一个或多个入口方法，方法有一个对应类型类的隐式参数。如下代码为CsvEncoder定义一个writeCsv方法：
 
-```text
+```scala
 def writeCsv[A](values: List[A])(implicit enc: CsvEncoder[A]): String = 
     values.map(value => enc.encode(value).mkString(",")).mkString("\n")
 ```
 
 用一些测试数据来测试writeCsv方法：
 
-```text
+```scala
 val employees: List[Employee] = List(
     Employee("Bill", 1, true), 
     Employee("Peter", 2, false), 
@@ -51,7 +51,7 @@ val employees: List[Employee] = List(
 
 当我们调用writeCsv方法的时候，编译器推断类型参数（type parameter）的类型并在上下文中搜索与其类型一致的隐式CsvEncoder实例。下述代码会自动寻找隐式employeeEncoder对象：
 
-```text
+```scala
 writeCsv(employees) 
 // res4: String =
 // Bill,1,yes
@@ -61,7 +61,7 @@ writeCsv(employees)
 
 只要在作用域内有一个与writeCsv的values参数类型一致的隐式CsvEncoder实例，writeCsv方法就能正常运行。如下实现将IceCream实例编码为CSV：
 
-```text
+```scala
 case class IceCream(name: String, numCherries: Int, inCone: Boolean)
 
 implicit val iceCreamEncoder: CsvEncoder[IceCream] = 
@@ -91,7 +91,7 @@ writeCsv(iceCreams)
 
 类型类虽然灵活，但是需要我们为每一个关心的类型定义对应的隐式实例。幸运的是Scala编译器有一些小窍门可以简化操作，它可以将给定的几套用户自定义规则套接起来解析目标类型类实例。例如假定已经有了A和B类型的CsvEncoder则我们可以为\(A, B\)类型写一个创建CsvEncoder的规则。代码如下：
 
-```text
+```scala
 implicit def pairEncoder[A, B](
     implicit 
     aEncoder: CsvEncoder[A], 
@@ -107,7 +107,7 @@ implicit def pairEncoder[A, B](
 
 当一个隐式方法的所有参数都被标记为implicit时，编译器可以用它作为一个解析规则来从参数的隐式类型类实例创建我们需要的类型类实例。例如，如果调用writeCsv方法时传入一个List\[\(Employee, IceCream\)\]对象，编译器会自动组合pairEncoder、employeeEncoder和iceCreamEncoder三个类型类实例来创建一个CsvEncoder\[\(Employee, IceCream\)\]实例。调用代码如下：
 
-```text
+```scala
 writeCsv(employees zip iceCreams) 
 // res8: String =
 // Bill,1,yes,Sundae,1,no
@@ -123,7 +123,7 @@ writeCsv(employees zip iceCreams)
 
 习惯上在Scala中类型类的定义方式包括一个伴随对象，该对象由一些标准的方法组成。代码如下：
 
-```text
+```scala
 object CsvEncoder { 
     // "Summoner" method
     def apply[A](implicit enc: CsvEncoder[A]): CsvEncoder[A] = enc
@@ -140,21 +140,21 @@ object CsvEncoder {
 
 apply方法也被称为“召唤员”或者“实现者”，可以为给定的目标类型创建一个类型类实例。如下代码实现创建IceCream的CsvEncoder实例：
 
-```text
+```scala
 CsvEncoder[IceCream] 
 // res9: CsvEncoder[IceCream] = $anon$1@5940ac6a
 ```
 
 一般情况下apply方法与scala.Predef类中定义的implicitly功能一致。implicitly创建实例方式如下：
 
-```text
+```scala
 implicitly[CsvEncoder[IceCream]] 
 // res10: CsvEncoder[IceCream] = $anon$1@5940ac6a
 ```
 
 然而我们将在4.2节看到，当我们使用shapeless的时候会碰到一些implicitly不能正确推断出类型的情形，此种情况使用shapeless中定义apply方法的方式依然能正常解决，所以为我们创建的每一个类型类写一个apply方法是值得的。我们也能用shapeless中的特殊的“the”方法（后续详细介绍）来实现。代码如下：
 
-```text
+```scala
 import shapeless._
 
 the[CsvEncoder[IceCream]] 
@@ -163,7 +163,7 @@ the[CsvEncoder[IceCream]]
 
 在CsvEncoder类的伴随对象中定义的instance方法，有时也称之为纯净方法，能够为创建新的类型类实例提供简洁的语法，去除匿名类语法的不必要的模板代码。如下代码：
 
-```text
+```scala
 implicit val booleanEncoder: CsvEncoder[Boolean] = 
     new CsvEncoder[Boolean] {
         def encode(b: Boolean): List[String] = 
@@ -173,7 +173,7 @@ implicit val booleanEncoder: CsvEncoder[Boolean] =
 
 可以被简写成如下形式：
 
-```text
+```scala
 implicit val booleanEncoder: CsvEncoder[Boolean] = 
     instance(b => if(b) List("yes") else List("no"))
 ```
@@ -197,7 +197,7 @@ implicit val booleanEncoder: CsvEncoder[Boolean] =
 
 首先来定义一个实例构造子并为String、Int、Boolean类型创建CsvEncoder实例。代码如下：
 
-```text
+```scala
 def createEncoder[A](func: A => List[String]): CsvEncoder[A] = 
     new CsvEncoder[A] {
         def encode(value: A): List[String] = func(value) 
@@ -215,7 +215,7 @@ implicit val booleanEncoder: CsvEncoder[Boolean] =
 
 组合以上的代码为HList创建一个CsvEncoder实例，将用到两个规则：一个是为HNil生成CsvEncoder实例，另一个是为::生成CsvEncoder实例。我们来看代码：
 
-```text
+```scala
 import shapeless.{HList, ::, HNil}
 
 
@@ -238,7 +238,7 @@ implicit def hlistEncoder[H, T <: HList](
 
 将上面代码中的5个CsvEncoder实例组合，我们就能为任何包含String、Int、Boolean类型的HList创建一个CsvEncoder实例。代码如下：
 
-```text
+```scala
 val reprEncoder: CsvEncoder[String :: Int :: Boolean :: HNil] = 
     implicitly
 
@@ -252,7 +252,7 @@ reprEncoder.encode("abc" :: 123 :: true :: HNil)
 
 可以将我们的上述派生规则与Generic实例组合来为IceCream类创建一个CsvEncoder实例。代码如下：
 
-```text
+```scala
 import shapeless.Generic
 
 implicit val iceCreamEncoder: CsvEncoder[IceCream] = { 
@@ -264,7 +264,7 @@ implicit val iceCreamEncoder: CsvEncoder[IceCream] = {
 
 然后用以下方式调用它：
 
-```text
+```scala
 writeCsv(iceCreams) 
 // res11: String =
 // Sundae,1,no
@@ -274,7 +274,7 @@ writeCsv(iceCreams)
 
 这个解决方案只是针对IceCream类的，理想情况下我们希望能有一个单一的规则来处理所有的样例类，当然这个样例类要有一个Generic实例以及与之匹配的CsvEncoder实例。让我们一步步的来实现这一点。第一步代码如下：
 
-```text
+```scala
 implicit def genericEncoder[A](
     implicit
     gen: Generic[A], 
@@ -284,7 +284,7 @@ implicit def genericEncoder[A](
 
 我们遇到的第一个问题就是选择一个类型替换上述代码中的???，可以用gen.Repr来替换，但是不幸的是编译器会报错。具体如下:
 
-```text
+```scala
 implicit def genericEncoder[A](
     implicit 
     gen: Generic[A], 
@@ -300,7 +300,7 @@ implicit def genericEncoder[A](
 
 导致这个问题的原因是作用域，在一个方法中，一个参数不能涉及另一个参数的类型成员。解决这个问题的最好方式是为我们的方法引入一个新的类型参数并将其关联到每一个相关的参数。代码如下：
 
-```text
+```scala
 implicit def genericEncoder[A, R](
     implicit 
     gen: Generic[A] { type Repr = R }, 
@@ -313,13 +313,13 @@ implicit def genericEncoder[A, R](
 
 我们现在有了一个能处理任何样例类的完整系统。调用方式如下：
 
-```text
+```scala
 writeCsv(iceCreams)
 ```
 
 上述代码以如下方式调用了我们的派生规则：
 
-```text
+```scala
 writeCsv(iceCreams)(
     genericEncoder(
         Generic[IceCream], 
@@ -334,7 +334,7 @@ Aux类型别名
 
 像Generic\[A\] { type Repr = L }这种类型的定义非常冗长并且难读，所以shapeless提供了一个类型别名Generic.Aux可以将类型成员变为类型参数。代码如下：
 
-```text
+```scala
 package shapeless
 
 object Generic {
@@ -344,7 +344,7 @@ object Generic {
 
 使用了别名之后就可以得到一个更易读的CsvEncoder实例定义方式。代码如下：
 
-```text
+```scala
 implicit def genericEncoder[A, R](
     implicit 
     gen: Generic.Aux[A, R],
@@ -361,7 +361,7 @@ implicit def genericEncoder[A, R](
 
 有两个主要原因可能会导致上述代码编译错误。第一个是编译器不能找到Generic实例。例如对非样例类调用writeCsv方法。下面的代码直接对普通的Foo类进行操作，由于无法获取Generic实例而报错：
 
-```text
+```scala
 class Foo(bar: String, baz: Int)
 
 writeCsv(List(new Foo("abc", 123)))
@@ -375,7 +375,7 @@ writeCsv(List(new Foo("abc", 123)))
 
 编译器不能为HList推断出CsvEncoder实例也是潜在的错误类型，一般情况造成这个错误的原因可能是缺少了ADT中的某个字段对应类型的CsvEncoder实例。例如，如果我们没有为java.util.Date定义隐式CsvEncoder实例，下面的代码就会编译失败：
 
-```text
+```scala
 import java.util.Date
 
 case class Booking(room: String, date: Date)
@@ -395,7 +395,7 @@ writeCsv(List(Booking("Lecture hall", new Date())))
 
 上一节我们创建了一套规则，实现了为任何乘积类型自动化的派生一个CsvEncoder实例。这一节我们将对余积类型做同样的事情。我们继续以之前介绍的Shape类型为例：
 
-```text
+```scala
 sealed trait Shape 
 final case class Rectangle(width: Double, height: Double) extends Shape 
 final case class Circle(radius: Double) extends Shape
@@ -403,7 +403,7 @@ final case class Circle(radius: Double) extends Shape
 
 Shape的泛型表示类型是Rectangle :+: Circle :+: CNil，3.2.2节中我们为Rectangle类和Circle类定义了乘积类型的CsvEncoder实例。现在我们来用与HList同样的规则为:+:和CNil定义一个泛型CsvEncoder实例。代码如下：
 
-```text
+```scala
 import shapeless.{Coproduct, :+:, CNil, Inl, Inr}
 
 
@@ -428,7 +428,7 @@ implicit def coproductEncoder[H, T <: Coproduct](
 
 如果我们将下述代码放在3.2节中的乘积类型的CsvEncoder实例（genericEncoder）的旁边，那么我们就能序列化一个shape类型组成的列表对象。代码如下：
 
-```text
+```scala
 val shapes: List[Shape] = List( 
     Rectangle(3.0, 4.0), 
     Circle(1.0)
@@ -442,14 +442,14 @@ writeCsv(shapes)
 
 不幸的是，代码报错了，报的错误与3.2.3节中介绍的一样，毫无线索。经过分析可以知道失败的原因是我们并没有为Double类型定义CsvEncoder隐式实例。解决方案很简单，定义一个就可以了。代码如下：
 
-```text
+```scala
 implicit val doubleEncoder: CsvEncoder[Double] = 
     createEncoder(d => List(d.toString))
 ```
 
 加上这段代码之后，一切正常运行。结果如下：
 
-```text
+```scala
 writeCsv(shapes) 
 // res7: String =
 // 3.0,4.0
@@ -470,7 +470,7 @@ Scala编译器有一个叫做[SI-7046](https://issues.scala-lang.org/browse/SI-7
 
 我们来尝试一些更困有挑战的例子——比如操作一个二进制树类型。相关类型定义如下：
 
-```text
+```scala
 sealed trait Tree[A] 
 case class Branch[A](left: Tree[A], right: Tree[A]) extends Tree[A] 
 case class Leaf[A](value: A) extends Tree[A]
@@ -478,7 +478,7 @@ case class Leaf[A](value: A) extends Tree[A]
 
 理论上根据前面的代码我们已经能够为Tree类型正确的创建一个CsvEncoder实例。然而，上述代码会造成编译错误：
 
-```text
+```scala
 CsvEncoder[Tree[Int]]
 // <console>:23: error: could not find implicit value for parameter enc: CsvEncoder[Tree[Int]]
 //        CsvEncoder[Tree[Int]]
@@ -493,7 +493,7 @@ CsvEncoder[Tree[Int]]
 
 探索式是用来避免无限循环的，如果编译器在搜索一个特定分支的时候两次看到同一个目标类型就会放弃并移到下一分支。分析CsvEncode\[Tree\[Int\]\]的展开过程就会看到这种情况。其隐式解析处理过程如下：
 
-```text
+```scala
 CsvEncoder[Tree[Int]]                            //1                      
 CsvEncoder[Branch[Int] :+: Leaf[Int] :+: CNil]   //2
 CsvEncoder[Branch[Int]]                          //3
@@ -505,14 +505,14 @@ CsvEncoder[Tree[Int]]                            //5 uh oh
 
 实际上情况比这复杂的多，如果同一类型构造器被编译器发现两次并且类型参数的复杂性有所增加，编译器就会假设搜索的分支是有分歧的。这对shapeless来说是一个问题，因为像::\[H, T\]和:+:\[H, T\]的类型会在编译器展开泛型表示的时候出现很多次（因为T又是:\[H, T\]或:+:\[H, T\]类型），导致编译器即使坚持使用同样的扩展方法能找到解决方案也会过早放弃。考虑下述类型：
 
-```text
+```scala
 case class Bar(baz: Int, qux: String)
 case class Foo(bar: Bar)
 ```
 
 Foo类型的展开过程如下：
 
-```text
+```scala
 CsvEncoder[Foo]                       //1                
 CsvEncoder[Bar :: HNil]               //2        
 CsvEncoder[Bar]                       //3       
@@ -530,7 +530,7 @@ CsvEncoder[Int :: String :: HNil]     //4 uh oh
 
 Lazy的使用方式是以具体的隐式参数的类型为其类型参数。根据以往经验，最好对任何HList或Coprouduct类型的head类型和任何Generic实例的Repr类型参数采用此操作。示例代码如下：
 
-```text
+```scala
 implicit def hlistEncoder[H, T <: HList](
     implicit
     hEncoder: Lazy[CsvEncoder[H]], // wrap in Lazy
@@ -560,7 +560,7 @@ implicit def genericEncoder[A, R](
 
 这可以阻止编译器过早放弃，并且使解决方案能够在像Tree类型一样的复杂的或递归的类型中正常起作用。Tree类型的正常调用情况如下：
 
-```text
+```scala
 CsvEncoder[Tree[Int]] 
 // res2: CsvEncoder[Tree[Int]] = $anon$1@2199aca1
 ```
@@ -573,7 +573,7 @@ CsvEncoder[Tree[Int]]
 
 当编译器以简单的不能找到一个隐式值而失败的时候我们能做些什么呢？失败可能是由任何一个需要的隐式值的解析造成的。例如如下请况：
 
-```text
+```scala
 case class Foo(bar: Int, baz: Float)
 
 CsvEncoder[Foo]
@@ -585,7 +585,7 @@ CsvEncoder[Foo]
 
 失败的原因是我们没有为Float定义一个CsvEncoder隐式实例，然而这在应用中可能并不明显，但是能通过分析期望的展开序列来找到错误的原因。在错误代码之前插入一段CsvEncoder.apply或者implicitly的代码来看代码是否能够编译通过。还是以Foo类型的泛型表示为例：
 
-```text
+```scala
 CsvEncoder[Int :: Float :: HNil] 
 // <console>:27: error: could not find implicit value for parameter enc: CsvEncoder[Int :: Float :: shapeless.HNil]
 //        CsvEncoder[Int :: Float :: HNil]
@@ -594,7 +594,7 @@ CsvEncoder[Int :: Float :: HNil]
 
 这段代码不能通过编译，所以需要沿着展开方向继续深入搜索问题，下一步就是尝试分析HList的各个部分。代码如下：
 
-```text
+```scala
 CsvEncoder[Int]
 // <console>:27: error: could not find implicit value for parameter enc: CsvEncoder[Float]
 //        CsvEncoder[Float]
@@ -607,7 +607,7 @@ CsvEncoder[Int]
 
 scala.reflect包中提供的reify方法以Scala表达式为参数并返回一个与输入参数相对应的展开树对象（[AST](https://en.wikipedia.org/wiki/Abstract_syntax_tree) 抽象语法树），配有类型注释。示例如下：
 
-```text
+```scala
 import scala.reflect.runtime.universe._
 
 println(reify(CsvEncoder[Int])) 
@@ -624,13 +624,13 @@ println(reify(CsvEncoder[Int]))
 
 第一步，定义一个类型类：
 
-```text
+```scala
 trait MyTC[A]
 ```
 
 第二步，定义一些基础的类型类实例：
 
-```text
+```scala
 implicit def intInstance: MyTC[Int] = ??? 
 implicit def stringInstance: MyTC[String] = ???
 implicit def booleanInstance: MyTC[Boolean] = ???
@@ -638,7 +638,7 @@ implicit def booleanInstance: MyTC[Boolean] = ???
 
 第三步，为HList定义类型类实例：
 
-```text
+```scala
 import shapeless._
 
 implicit def hnilInstance: MyTC[HNil] = ???
@@ -652,7 +652,7 @@ implicit def hlistInstance[H, T <: HList](
 
 第四步，如果需要的话为Coproduct定义类型类实例：
 
-```text
+```scala
 implicit def cnilInstance: MyTC[CNil] = ???
 
 implicit def coproductInstance[H, T <: Coproduct](
@@ -664,7 +664,7 @@ implicit def coproductInstance[H, T <: Coproduct](
 
 最后，为Generic定义类型类实例：
 
-```text
+```scala
 implicit def genericInstance[A, R]( 
     implicit
     generic: Generic.Aux[A, R],

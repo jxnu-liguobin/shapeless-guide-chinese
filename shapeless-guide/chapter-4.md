@@ -8,7 +8,7 @@
 
 为了更好的说明依赖类型，我们先来看一下Generic类的细节。以下代码是它的简单定义：
 
-```text
+```scala
 trait Generic[A] {
     type Repr
     def to(value: A): Repr
@@ -18,7 +18,7 @@ trait Generic[A] {
 
 Generic实例与两个类型有关：类型参数A和类型成员Repr。假设我们用下面的代码实现了一个getRepr方法，我们将得到什么类型？
 
-```text
+```scala
 import shapeless.Generic
 
 def getRepr[A](value: A)(implicit gen: Generic[A]) = 
@@ -27,7 +27,7 @@ def getRepr[A](value: A)(implicit gen: Generic[A]) =
 
 答案是返回类型依赖gen实例。在展开调用getRepr方法的过程中，编译器会搜索Generic\[A\]实例，返回类型是此实例中定义的Repr的类型。来看两个具体的例子：
 
-```text
+```scala
 case class Vec(x: Int, y: Int) 
 case class Rect(origin: Vec, size: Vec)
 
@@ -40,7 +40,7 @@ getRepr(Rect(Vec(0, 0), Vec(5, 5)))
 
 此处演示的就是依赖类型：getRepr的返回类型依赖其值参数中的类型成员。重新定义一个Generic2类型，并假设Repr为Generic2的类型参数而不是类型成员，模仿getRepr定义一个getRepr2方法。代码如下：
 
-```text
+```scala
 trait Generic2[A, Repr]
 
 def getRepr2[A, R](value: A)(implicit generic: Generic2[A, R]): R = ???
@@ -54,7 +54,7 @@ shapeless在以下类中使用依赖类型：Generic、Witness（此类将在下
 
 例如shapeless提供了一个叫做Last的类型类，它能返回HList实例的最后一个元素。以下代码是Last定义的简单版本：
 
-```text
+```scala
 package shapeless.ops.hlist
 
 trait Last[L <: HList] { 
@@ -65,7 +65,7 @@ trait Last[L <: HList] {
 
 在我们的代码中能通过获取Last的实例来检查HList，在下面的两个例子中注意Out类型依赖于HList实例的类型。代码如下：
 
-```text
+```scala
 import shapeless.{HList, ::, HNil}
 
 import shapeless.ops.hlist.Last
@@ -81,7 +81,7 @@ val last2 = Last[Int :: String :: HNil]
 
 一旦有了Last的实例，我们就能通过传递值参数来调用其apply方法。代码如下：
 
-```text
+```scala
 last1("foo" :: 123 :: HNil)
 // res1: last1.Out = 123
 
@@ -91,7 +91,7 @@ last2(321 :: "bar" :: HNil)
 
 我们提供了两种防止上述代码错误的方式。第一：为Last定义的隐式值确保只有在HList类型至少包含一个元素的时候才能获取其实例，对空的HList类型获取Last实例会报错。结果如下：
 
-```text
+```scala
 Last[HNil] 
 // <console>:15: error: Implicit not found: shapeless.Ops.Last[
 //  shapeless.HNil]. shapeless.HNil is empty, so there is no last
@@ -102,7 +102,7 @@ Last[HNil]
 
 第二：Last实例的类型参数能够检查我们传入的HList对象是否与此实例定义时类型相一致，如果不一致会报错。如下：
 
-```text
+```scala
 last1(321 :: "bar" :: HNil)
 // <console>:16: error: type mismatch;
 //  found   : Int :: String :: shapeless.HNil
@@ -113,7 +113,7 @@ last1(321 :: "bar" :: HNil)
 
 进一步，我们来实现一个自定义类型类，为其取名Second，用它来获取HList实例的第二个元素。定义如下：
 
-```text
+```scala
 trait Second[L <: HList] { 
     type Out
     def apply(value: L): Out 
@@ -135,7 +135,7 @@ object Second {
 
 scala.Predef包中的implicitly方法在获取实例的时候同样会檫除类型成员信息。将使用implicitly获取的Last实例的类型与使用Last.apply获取的实例的类型相比较。对比如下：
 
-```text
+```scala
 implicitly[Last[String :: Int :: HNil]] 
 // res6: shapeless.ops.hlist.Last[String :: Int :: shapeless.
 //   HNil] = shapeless.ops.hlist$Last$$anon$34@651110a2
@@ -146,7 +146,7 @@ Last[String :: Int :: HNil]
 
 通过以上对比可以看到implicitly召唤的实例的类型没有Out类型成员。由此可知当使用类型依赖函数进行编码时应避免使用implicitly，可以使用自定义apply方法或者使用shapeless中的the方法。使用the方法的代码如下：
 
-```text
+```scala
 import shapeless._
 
 the[Last[String :: Int :: HNil]] 
@@ -156,7 +156,7 @@ the[Last[String :: Int :: HNil]]
 
 我们只需要为至少包含两个元素的HList定义一个隐式方法即可。代码如下，其中A为第一个元素，B为第二个元素，Rest为其余元素：
 
-```text
+```scala
 implicit def hlistSecond[A, B, Rest <: HList]: Aux[A :: B :: Rest, B] = 
     new Second[A :: B :: Rest] {
         type Out = B 
@@ -167,7 +167,7 @@ implicit def hlistSecond[A, B, Rest <: HList]: Aux[A :: B :: Rest, B] =
 
 定义好此隐式方法之后，即可使用Second.apply方法获取Second实例。代码如下：
 
-```text
+```scala
 val second1 = Second[String :: Boolean :: Int :: HNil] 
 // second1: Second[String :: Boolean :: Int :: shapeless.HNil]{type
 //   Out = Boolean} = $anon$1@668168cd
@@ -179,7 +179,7 @@ val second2 = Second[String :: Int :: Boolean :: HNil]
 
 获取Second实例与获取Last实例有相同的限制条件。如果我们尝试为成员个数不能匹配的HList获取Second实例，解析将会失败并报错。结果如下：
 
-```text
+```scala
 Second[String :: HNil] 
 // <console>:26: error: could not find implicit value for parameter inst: Second[String :: shapeless.HNil]
 //        Second[String :: HNil]
@@ -188,7 +188,7 @@ Second[String :: HNil]
 
 同样，所获取的实例通过传入相匹配的HList对象来调用apply方法，如果不匹配会报错。代码如下：
 
-```text
+```scala
 second1("foo" :: true :: 123 :: HNil) 
 // res11: second1.Out = true
 
@@ -207,7 +207,7 @@ second1("baz" :: HNil)
 
 依赖类型函数提供从其它类型推断目标类型的手段，我们能链接多个依赖类型函数来执行包含多个步骤的计算。例如可以使用Generic获取一个样例类的Repr，然后使用Last来获取其最后一个元素的类型。代码如下：
 
-```text
+```scala
 def lastField[A](input: A)(
     implicit
     gen: Generic[A], 
@@ -221,7 +221,7 @@ def lastField[A](input: A)(
 
 不幸的是这段代码并不能通过编译，这跟我们3.2.2节中genericEncoder的定义所碰到的问题一样，可以通过将类型变量转换为类型参数的方式来解决。同理我们可以将上述代码修改如下：
 
-```text
+```scala
 def lastField[A, Repr <: HList](input: A)( 
     implicit 
     gen: Generic.Aux[A, Repr],
@@ -234,7 +234,7 @@ lastField(Rect(Vec(1, 2), Vec(3, 4)))
 
 这是一个通用规则，我们经常以这种方式来写代码。通过将所有的自由变量编码为类型参数，使得编译器能用合适的类型统一这些类型参数。这也同样适用于那些有更刁钻限制的场景。假设我们想为只有一个字段的样例类获取Generic实例。可以采用下面的代码：
 
-```text
+```scala
 def getWrappedValue[A, H](input: A)(
     implicit
     gen: Generic.Aux[A, H :: HNil] 
@@ -243,7 +243,7 @@ def getWrappedValue[A, H](input: A)(
 
 上面的代码错误很隐蔽，此方法能通过编译但是当我们调用它的时候会提示找不到隐式值。具体如下：
 
-```text
+```scala
 case class Wrapper(value: Int)
 
 getWrappedValue(Wrapper(42)) 
@@ -262,7 +262,7 @@ getWrappedValue(Wrapper(42))
 
 以下是getWrappedValue方法使用=:=限制Repr类型之后修订的版本：
 
-```text
+```scala
 def getWrappedValue[A, Repr <: HList, Head, Tail <: HList](input: A)(
     implicit
     gen: Generic.Aux[A, Repr],
@@ -277,7 +277,7 @@ def getWrappedValue[A, Repr <: HList, Head, Tail <: HList](input: A)(
 
 不幸的是又报错了，原因在于此方法中调用的head方法需要一个IsHCons类型的隐式参数，完善起来很容易——只需要使用shapeless的工具箱中的IsHCons工具即可。IsHCons是一个shapeless中的类型类，它用于将HList对象分为Head和Tail两部分，所以我们只需要使用IsHCons替换=:=即可解决错误。代码如下：
 
-```text
+```scala
 import shapeless.ops.hlist.IsHCons
 
 def getWrappedValue[A, Repr <: HList, Head, Tail <: HList](in: A)( 
@@ -289,7 +289,7 @@ def getWrappedValue[A, Repr <: HList, Head, Tail <: HList](in: A)(
 
 问题解决，getWrappedValue方法和对其调用都能通过编译。结果如下：
 
-```text
+```scala
 getWrappedValue(Wrapper(42)) 
 // res17: Int = 42
 ```
