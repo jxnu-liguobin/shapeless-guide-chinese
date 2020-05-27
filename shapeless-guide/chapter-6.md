@@ -16,7 +16,7 @@
 
 HList有init和last两个扩展方法，它们分别基于shapeless.ops.hlist.Init和shapeless.ops.hlist.Last类型类。Coproduct有相似的方法和类型类。它们都是ops模式的完美样例。下面是这两个扩展方法的简单定义：
 
-```text
+```scala
 package shapeless 
 package syntax
 
@@ -28,7 +28,7 @@ implicit class HListOps[L <: HList](l : L) {
 
 每一个方法的返回类型都由隐式参数的一个依赖类型决定，为每一个类型类定义的实例提供了类型的真实对应关系。下面以Last类型类的框架为例：
 
-```text
+```scala
 trait Last[L <: HList] { 
     type Out
     def apply(in: L): Out 
@@ -42,9 +42,9 @@ object Last {
 }
 ```
 
-仔细观察这些实现。首先我们通常可以实现具有几个实际成员的（上例中只有两个）的ops类型类。因此我们能把类型类的伴随类中所有可能需要的实际成员打包在一起，最终直接调用对应的扩展方法而无需引入shapeless.ops包。调用如下：
+仔细观察这些实现。首先我们通常可以实现具有几个实际成员的（上例中只有两个）的ops类型类。因此我们能把类型类的伴生对象中所有可能需要的实际成员打包在一起，最终直接调用对应的扩展方法而无需引入shapeless.ops包。调用如下：
 
-```text
+```scala
 import shapeless._
 
 ("Hello" :: 123 :: true :: HNil).last 
@@ -56,7 +56,7 @@ import shapeless._
 
 第二，这些类型类只能用在至少包含一个元素的HList实例，使得在一定程度上具有对代码进行检查的功能。当我们尝试对一个空的HList调用last方法，编译器会直接报错。如下：
 
-```text
+```scala
 HNil.last 
 // <console>:16: error: Implicit not found: shapeless.Ops.Last[ shapeless.HNil.type]. 
 //    shapeless.HNil.type is empty, so there is no last element.
@@ -70,7 +70,7 @@ HNil.last
 
 下面以创建自定义“操作”来作为练习。合并Last和Init来创建一个Penultimate类型类，它能从HList中取出倒数第二个元素。下面是用Aux类型别名和apply方法完成的定义代码：
 
-```text
+```scala
 import shapeless._
 
 trait Penultimate[L] {
@@ -89,7 +89,7 @@ object Penultimate {
 
 我们只需要定义一个Penultimate实例，该实例使用4.3节中所介绍的技巧将Init和Last结合起来。代码如下：
 
-```text
+```scala
 import shapeless.ops.hlist
 
 implicit def hlistPenultimate[L <: HList, M <: HList, O]( 
@@ -106,7 +106,7 @@ implicit def hlistPenultimate[L <: HList, M <: HList, O](
 
 我们能用下面的方式使用该实例：
 
-```text
+```scala
 type BigList = String :: Int :: Boolean :: Double :: HNil
 
 val bigList: BigList = "foo" :: 123 :: true :: 456.0 :: HNil
@@ -117,7 +117,7 @@ Penultimate[BigList].apply(bigList)
 
 获取Penultimate实例需要编译器同时完成获取Last和Init的实例，所以对于长度不满足的HList继承了与Last和Init的同一类型检查标准。代码如下：
 
-```text
+```scala
 type TinyList = String :: HNil
 
 val tinyList = "bar" :: HNil
@@ -130,7 +130,7 @@ Penultimate[TinyList].apply(tinyList)
 
 对于底层用户我们可以为HList定义扩展方法，使调用变的更容易。代码如下：
 
-```text
+```scala
 implicit class PenultimateOps[A](a: A) { 
     def penultimate(implicit inst: Penultimate[A]): inst.Out = 
         inst.apply(a)
@@ -142,7 +142,7 @@ bigList.penultimate
 
 通过提供一个基于Generic的实例就可以为所有的乘积类型提供Penultimate类型类操作。代码如下：
 
-```text
+```scala
 implicit def genericPenultimate[A, R, O]( 
     implicit
     generic: Generic.Aux[A, R], 
@@ -166,13 +166,13 @@ IceCream("Sundae", 1, false).penultimate
 
 当在我们的代码中将多个“操作”链接成代码块的时候它的力量就已经显露无遗。下面我们将以一个极具吸引力的例子结束这一章：创建一个类型类用于展示样例类的迁移（这个词借用“数据库迁移”——数据库结构的自动升级的SQL脚本）或称之为进化。例如，如果我们的某个应用的第一版包含下面的样例类：
 
-```text
+```scala
 case class IceCreamV1(name: String, numCherries: Int, inCone: Boolean)
 ```
 
 我们的迁移类库应该能够自由的实现手工升级。比如现有以下的后续版本的样例类：
 
-```text
+```scala
 // Remove fields:
 case class IceCreamV2a(name: String, inCone: Boolean)
 
@@ -185,7 +185,7 @@ case class IceCreamV2c(name: String, inCone: Boolean, numCherries: Int, numWaffl
 
 理想情况下我们用下述代码迁移我们的IceCreamV1：
 
-```text
+```scala
 IceCreamV1("Sundae", 1, false).migrateTo[IceCreamV2a]
 ```
 
@@ -195,7 +195,7 @@ IceCreamV1("Sundae", 1, false).migrateTo[IceCreamV2a]
 
 Migration类型类展示了从源类型到目标类型的转换过程。这两个在我们的派生过程都将作为输入类型，所以都是类型参数。我们不需要Aux类型别名因为没有需要提取的类型成员。Migration类型类的代码如下：
 
-```text
+```scala
 trait Migration[A, B] {
     def apply(a: A): B 
 }
@@ -203,7 +203,7 @@ trait Migration[A, B] {
 
 我们这里也提供一个扩展方法使得例子更易读。代码如下:
 
-```text
+```scala
 implicit class MigrationOps[A](a: A) {
     def migrateTo[B](implicit migration: Migration[A, B]): B = 
         migration.apply(a) 
@@ -220,7 +220,7 @@ implicit class MigrationOps[A](a: A) {
 
 使用Generic或者LabelledGeneric实现第1步和第3步，并用一个叫做Intersection的“操作”实现第2步。LabelledGeneric看上去是一个明智的选择，因为我们需要根据名称来识别字段。代码如下：
 
-```text
+```scala
 import shapeless._ 
 import shapeless.ops.hlist
 
@@ -237,14 +237,14 @@ implicit def genericMigration[A, B, ARepr <: HList, BRepr <: HList](
 
 shapeless源码中的Intersection类型（见[https://github.com/milessabin/shapeless/blob/shapeless-2.3.2/core/src/main/scala/shapeless/ops/hlists.scala\#L1297-L1352](https://github.com/milessabin/shapeless/blob/shapeless-2.3.2/core/src/main/scala/shapeless/ops/hlists.scala#L1297-L1352)）。它的Aux类型别名有三个参数：两个HList类型的输入和二者相交的HList类型的输出。上述样例代码中我们将ARepr和BRepr指定为输入类型、BRepr指定为输出类型，这意味着只有在B的字段完全是A中的字段的子集的时候隐式解析才能成功，此处完全指的是名称和顺序均需一致。将IceCreamV1迁移到IceCreamV2a的代码如下：
 
-```text
+```scala
 IceCreamV1("Sundae", 1, true).migrateTo[IceCreamV2a] 
 // res6: IceCreamV2a = IceCreamV2a(Sundae,true)
 ```
 
 但是如果我们尝试迁移字段不完全匹配的类型，编译器就会报错。比如将IceCreamV1迁移到IceCreamV2b就会造成下面的结果：
 
-```text
+```scala
 IceCreamV1("Sundae", 1, true).migrateTo[IceCreamV2b] 
 // <console>:23: error: could not find implicit value for parameter
 //    migration: Migration[IceCreamV1,IceCreamV2b]
@@ -256,7 +256,7 @@ IceCreamV1("Sundae", 1, true).migrateTo[IceCreamV2b]
 
 我们需要使用另一个ops类型类使迁移支持调整字段顺序。[Align](https://github.com/milessabin/shapeless/blob/shapeless-2.3.2/core/src/main/scala/shapeless/ops/hlists.scala#L1973-L1997)“操作”能调整一个HList中的字段顺序使之与另一个HList中的字段顺序相匹配。可以使用Align修改上面的genericMigration定义使之完成此功能。代码如下：
 
-```text
+```scala
 implicit def genericMigration[ 
     A, B, 
     ARepr <: HList, BRepr <: HList, 
@@ -275,7 +275,7 @@ implicit def genericMigration[
 
 此处引入了一个叫做Unaligned的新的类型参数来表示在调整顺序之前ARepr和BRepr两个类型字段相交的结果类型，并使用Align将Unaligned实例转换为BRepr。修改之后我们就能同时迁移减少字段和调整字段顺序。以下两个例子都会正常运行：
 
-```text
+```scala
 IceCreamV1("Sundae", 1, true).migrateTo[IceCreamV2a] 
 // res8: IceCreamV2a = IceCreamV2a(Sundae,true)
 
@@ -285,7 +285,7 @@ IceCreamV1("Sundae", 1, true).migrateTo[IceCreamV2b]
 
 然而，如果我们尝试对添加字段的类型进行迁移，还是会报错。比如将IceCreamV1转化为IceCreamV2c的结果如下：
 
-```text
+```scala
 IceCreamV1("Sundae", 1, true).migrateTo[IceCreamV2c] 
 // <console>:25: error: could not find implicit value for parameter
 //    migration: Migration[IceCreamV1,IceCreamV2c]
@@ -297,7 +297,7 @@ IceCreamV1("Sundae", 1, true).migrateTo[IceCreamV2c]
 
 为了计算新增字段的默认值我们需要一些技巧。shapeless没有为这种情况提供类型类，但是Cat框架以幺半群（Monoid）的方式提供了这种类型类。下面是Monoid的简单定义：
 
-```text
+```scala
 package cats
 
 trait Monoid[A] {
@@ -310,7 +310,7 @@ Monoid定义了两个操作：为创建一个“零”值定义的empty操作以
 
 Cat为我们关心的所有基础类型（Int、Double、Boolean和String）提供了Monoid实例。我们可以使用第五章中的技巧为HNil和::定义Monoid实例。代码如下：
 
-```text
+```scala
 import cats.Monoid 
 import cats.instances.all._ 
 import shapeless.labelled.{field, FieldType}
@@ -336,7 +336,7 @@ implicit def emptyHList[K <: Symbol, H, T <: HList](
     }
 ```
 
-我们需要将Monoid（双关语？没看明白）与一系列的其它ops结合来完成我们最终版的Migration。下面是所有步骤：
+我们需要将Monoid与一系列的其它ops结合来完成我们最终版的Migration。下面是所有步骤：
 
 1. 使用LabelledGeneric将A转换为它的泛型表示；
 2. 使用Intersection计算A和B共有字段的HList；
@@ -348,7 +348,7 @@ implicit def emptyHList[K <: Symbol, H, T <: HList](
 
 我们已经学习了如何实现1、2、4、6和7步，可以使用一个叫做Diff的与Intersection相似的操作来实现第3步，并使用另一个叫做Prepend的操作来实现第5步。下面是完整的解决方案：
 
-```text
+```scala
 implicit def genericMigration[ 
     A, B, ARepr <: HList, BRepr <: HList,
     Common <: HList, Added <: HList, Unaligned <: HList
@@ -372,7 +372,7 @@ implicit def genericMigration[
 
 有了最终版的类型类实例，就可以使用genericMigration为6.3节中设置的所有情况进行数据迁移。样例如下：
 
-```text
+```scala
 IceCreamV1("Sundae", 1, true).migrateTo[IceCreamV2a] 
 // res14: IceCreamV2a = IceCreamV2a(Sundae,true)
 
@@ -391,7 +391,7 @@ IceCreamV1("Sundae", 1, true).migrateTo[IceCreamV2c]
 
 shapeless中的“record ops”对元素被标记的HList提供了类似映射（map）的操作。下面以IceCream类为例，介绍对其进行操作的几个例子。首先获取IceCream的LabelledGeneric类型：
 
-```text
+```scala
 import shapeless._
 
 case class IceCream(name: String, numCherries: Int, inCone: Boolean)
@@ -407,7 +407,7 @@ val sundae = LabelledGeneric[IceCream]. to(IceCream("Sundae", 1, false))
 
 不像我们之前已经看到的HList和Coproduct操作，record ops语法需要对shapeless.record包进行显式引入。代码如下：
 
-```text
+```scala
 import shapeless.record._
 ```
 
@@ -415,7 +415,7 @@ import shapeless.record._
 
 get扩展方法和它的对应的Selector类型类允许我们根据标签来获取此标签对应的字段的值。样例如下：
 
-```text
+```scala
 sundae.get('name) 
 // res1: String = Sundae
 
@@ -425,7 +425,7 @@ sundae.get('numCherries)
 
 获取未定义的字段会导致编译错误。具体如下：
 
-```text
+```scala
 sundae.get('nomCherries) 
 // <console>:20: error: No field Symbol with shapeless.tag.Tagged[ 
 //    String("nomCherries")] in record String with shapeless.labelled. 
@@ -442,7 +442,7 @@ sundae.get('nomCherries)
 
 updated方法和Updater类型类允许我们根据key值来修改字段。remove方法和Remover类型类允许我们根据key值来删除字段。使用方式如下：
 
-```text
+```scala
 sundae.updated('numCherries, 3) 
 // res4: shapeless.::[String with shapeless.labelled.KeyTag[Symbol with 
 //    shapeless.tag.Tagged[String("name")],String],shapeless.::[Int with 
@@ -459,9 +459,9 @@ sundae.remove('inCone)
 //    Sundae :: 1 :: HNil)
 ```
 
-updateWith方法和Modifier类型类允许我们传\#x4F20;入一个更新函数来修改字段。以下代码实现将name字段更新为“MASSIVE ”加其原始值：
+updateWith方法和Modifier类型类允许我们传入一个更新函数来修改字段。以下代码实现将name字段更新为“MASSIVE ”加其原始值：
 
-```text
+```scala
 sundae.updateWith('name)("MASSIVE " + _) 
 // res6: shapeless.::[String with shapeless.labelled.KeyTag[Symbol with 
 //    shapeless.tag.Tagged[String("name")],String],shapeless.::[Int with 
@@ -475,7 +475,7 @@ sundae.updateWith('name)("MASSIVE " + _)
 
 toMap方法和ToMap类型类可以将一个记录转换为Map对象。代码如下：
 
-```text
+```scala
 sundae.toMap
 // res7: Map[Symbol with shapeless.tag.Tagged[_ >: String("inCone") 
 //    with String("numCherries") with String("name") <: String],Any] = 

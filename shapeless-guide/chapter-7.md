@@ -26,7 +26,7 @@ shapeless为实现多态函数提供了一个叫做Poly的类型。简单解释�
 
 Poly类的核心代码是一个泛型的apply方法，它除了有一个普通A类型的参数，还接受一个Case\[P, A\]（原文为Case\[A\]）类型的隐式参数。Case和Poly的定义如下：
 
-```text
+```scala
 // This is not real shapeless code.
 // It's just for demonstration.
 
@@ -43,7 +43,7 @@ trait Poly {
 
 当我们实现一个实际的Poly类的时候，需要为每一个关心的参数类型提供Case实例，Case实例的apply方法定义了对此种类型的数据做何种映射。下面代码实现了实际的函数体：
 
-```text
+```scala
 // This is not real shapeless code.
 // It's just for demonstration.
 
@@ -64,7 +64,7 @@ object myPoly extends Poly {
 
 当我们调用myPoly.apply时，编译器搜索对应的隐式Case实例并调用它。例如下述代码会调用隐式的intCase：
 
-```text
+```scala
 myPoly.apply(123)
 // res8: Double = 61.5
 ```
@@ -75,7 +75,7 @@ myPoly.apply(123)
 
 上面的代码不是实际的shapeless代码，但是幸运的是，shapeless提供了更加容易的Poly实例定义方式。下面是以正确的语法定义的myPoly：
 
-```text
+```scala
 import shapeless._
 
 object myPoly extends Poly1 { 
@@ -95,7 +95,7 @@ object myPoly extends Poly1 {
 
 除了语法差异，使用shapeless真实代码定义的myPoly在功能上与样例中定义的myPoly是一致的，我们能给其提供一个Int或String类型的参数，得到一个相应类型的返回结果。具体如下：
 
-```text
+```scala
 myPoly.apply(123) 
 // res10: myPoly.intCase.Result = 61.5
 
@@ -105,7 +105,7 @@ myPoly.apply("hello")
 
 shapeless同样支持多个参数的Poly，下面是两个参数的例子：
 
-```text
+```scala
 object multiply extends Poly2 { 
     implicit val intIntCase: Case.Aux[Int, Int, Int] = 
         at((a, b) => a * b)
@@ -123,7 +123,7 @@ multiply(3, "4")
 
 因为Case实例只是隐式值，我们能基于类型类定义Case实例并实现在前面章节介绍过的所有高级隐式解析。下面是不同上下文环境下的求数字之和的简单的例子：
 
-```text
+```scala
 import scala.math.Numeric
 
 object total extends Poly1 { 
@@ -154,14 +154,14 @@ total(List(1L, 2L, 3L))
 
 Poly将Scala的类型推断移出了编译器的舒适区，只需要让编译器一次多做几个类型推断就能很容易迷惑它。比如下面的代码能够正常编译：
 
-```text
+```scala
 val a = myPoly.apply(123) 
 val b: Double = a
 ```
 
 然而，将上述两行代码组合成一行就会报错。如下：
 
-```text
+```scala
 val a: Double = myPoly.apply(123) 
 // <console>:17: error: type mismatch;
 //  found   : Int(123)
@@ -174,7 +174,7 @@ val a: Double = myPoly.apply(123)
 
 如果我们增加一个类型注释，编译正常。如下：
 
-```text
+```scala
 val a: Double = myPoly.apply[Int](123)
 // a: Double = 61.5
 ```
@@ -185,7 +185,7 @@ val a: Double = myPoly.apply[Int](123)
 
 shapeless提供了一套基于Poly的函数化操作，每一个都是作为一个ops类型类来实现的。此处我们以map和flatMap操作为例。下面是map操作的代码：
 
-```text
+```scala
 import shapeless._
 
 object sizeOf extends Poly1 { 
@@ -206,7 +206,7 @@ object sizeOf extends Poly1 {
 
 注意结果HList的元素类型与sizeOf里的Case实例的输出类型相匹配。只需为HList实例准备一个Poly对象，在此Poly对象中对该HList的所有类型都提供相应的Case实例，就能对该HList实例调用map函数。但是如果编译器不能为某个成员找到其对应的Case实例那么就会报错。如下：
 
-```text
+```scala
 (1.5 :: HNil).map(sizeOf) 
 // <console>:17: error: could not find implicit value for parameter 
 //    mapper: shapeless.ops.hlist.Mapper[sizeOf.type,Double :: 
@@ -217,7 +217,7 @@ object sizeOf extends Poly1 {
 
 我们也能对HList实例进行flatMap操作，只要在定义的Poly实例中使每一个Case实例返回的是HList类型即可。代码如下：
 
-```text
+```scala
 object valueAndSizeOf extends Poly1 {
     implicit val intCase: Case.Aux[Int, Int :: Int :: HNil] = 
         at(num => num :: num :: HNil)
@@ -237,7 +237,7 @@ object valueAndSizeOf extends Poly1 {
 
 再次强调，如果调用flatMap的HList实例有某个元素类型所对应的Case实例没有定义或者其对应的Case实例返回的结果不是HList类型那么编译器就会报错。如下：
 
-```text
+```scala
 // Using the wrong Poly with flatMap:
 (10 :: "hello" :: true :: HNil).flatMap(sizeOf) 
 // <console>:18: error: could not find implicit value for parameter
@@ -253,7 +253,7 @@ map和flatMap分别基于Mapper和FlatMapper类型类，我们将在7.5节中看
 
 除了map和flatMap之外，shapeless还提供了基于Poly2的foldLeft和foldRight操作，其区别在于Case实例需要对两个变量进行处理。代码如下：
 
-```text
+```scala
 import shapeless._
 
 object sum extends Poly2 { 
@@ -274,7 +274,7 @@ object sum extends Poly2 {
 
 我们能以Poly和像Mapper、FlatMapper一样的类型类为基础，定义我们自己的类型类。作为例子，我们定义一个实现从一个样例类到另一个样例类的map操作的类型类ProductMapper。代码如下：
 
-```text
+```scala
 trait ProductMapper[A, B, P] { 
     def apply(a: A): B 
 }
@@ -282,7 +282,7 @@ trait ProductMapper[A, B, P] {
 
 我们能用一个Mapper参数和一对Generic参数来创建一个ProductMapper的实例。代码如下：
 
-```text
+```scala
 import shapeless._ 
 import shapeless.ops.hlist
 
@@ -307,7 +307,7 @@ implicit def genericProductMapper[
 
 我们来创建一个扩展方法以使ProductMapper更容易被调用，用户在调用的时候只需要指定B的类型。可以使用一些间接的方式来让编译器从值参数推导Poly的类型。此处定义了一个Builder类，并为该类提供一个泛型的apply方法，传入一个poly变量和一个隐式的ProductMapper对象，这样就能自动的根据B的类型推断出P的类型。代码如下：
 
-```text
+```scala
 implicit class ProductMapperOps[A](a: A) {
     class Builder[B] {
         def apply[P <: Poly](poly: P) 
@@ -321,7 +321,7 @@ implicit class ProductMapperOps[A](a: A) {
 
 下面是上述方法的使用样例：
 
-```text
+```scala
 object conversions extends Poly1 {
     implicit val intCase: Case.Aux[Int, Boolean] = at(_ > 0) 
     implicit val boolCase: Case.Aux[Boolean, Int] = at(if(_) 1 else 0)

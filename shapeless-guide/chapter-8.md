@@ -6,7 +6,7 @@
 
 shapeless使用“[Church encoding](https://en.wikipedia.org/wiki/Church_encoding)”的方式在类型层面表示自然数字并提供了一个有两个子类的Nat类型，两个子类型为：\_0代表0、Succ\[N\]代表N+1，其中N也是Nat类型。具体如下：
 
-```text
+```scala
 import shapeless.{Nat, Succ}
 
 type Zero = Nat._0 
@@ -17,7 +17,7 @@ type Two = Succ[One]
 
 shapeless以Nat.\_N的方式预定义了前22个Nat。具体如下：
 
-```text
+```scala
 Nat._1
 Nat._2
 Nat._3
@@ -26,7 +26,7 @@ Nat._3
 
 Nat没有运行时语义，我们必须使用ToInt类型类将Nat转换为运行时的Int。代码如下：
 
-```text
+```scala
 import shapeless.ops.nat.ToInt
 
 val toInt = ToInt[Two]
@@ -37,7 +37,7 @@ toInt.apply()
 
 Nat.toInt方法为调用toInt.apply\(\)方法提供了一个方便的简写。它以隐式参数的方式接受ToInt的实例。代码如下：
 
-```text
+```scala
 Nat.toInt[Nat._3] 
 // res8: Int = 3
 ```
@@ -46,7 +46,7 @@ Nat.toInt[Nat._3]
 
 Nat的其中一个使用案例是计算HList和Coproduct的元素数目。shapeless为此分别提供了shapeless.ops.hlist.Length和shapeless.ops.coproduct.Length两个类型类。使用方式如下：
 
-```text
+```scala
 import shapeless._ 
 import shapeless.ops.{hlist, coproduct, nat}
 
@@ -65,7 +65,7 @@ val coproductLength = coproduct.Length[Double :+: Char :+: CNil]
 
 Length的实例有一个类型成员Out，它以Nat类型表示结果长度。取出Int类型结果方式如下：
 
-```text
+```scala
 Nat.toInt[hlistLength.Out] 
 // res0: Int = 3
 
@@ -75,7 +75,7 @@ Nat.toInt[coproductLength.Out]
 
 下面让我们在具体的例子中运用类型计数。我们将创建一个SizeOf类型类来计算样例类的字段个数并返回一个Int类型。代码如下：
 
-```text
+```scala
 trait SizeOf[A] { 
     def value: Int 
 }
@@ -91,7 +91,7 @@ def sizeOf[A](implicit size: SizeOf[A]): Int = size.value
 
 下面是按照第四章中介绍的方式所写的实现方案：
 
-```text
+```scala
 implicit def genericSizeOf[A, L <: HList, N <: Nat]( 
     implicit 
     generic: Generic.Aux[A, L],
@@ -105,7 +105,7 @@ implicit def genericSizeOf[A, L <: HList, N <: Nat](
 
 使用下面的代码进行测试：
 
-```text
+```scala
 case class IceCream(name: String, numCherries: Int, inCone: Boolean)
 
 sizeOf[IceCream] 
@@ -116,7 +116,7 @@ sizeOf[IceCream]
 
 像[ScalaCheck](https://scalacheck.org/)这样基于属性的测试库都使用类型类来为单元测试生成随机数据。例如，ScalaCheck提供了Arbitrary类型类，我们可以通过如下方式使用它：
 
-```text
+```scala
 import org.scalacheck._
 
 for(i <- 1 to 3) println(Arbitrary.arbitrary[Int].sample) 
@@ -134,7 +134,7 @@ ScalaCheck为更多的标准Scala类型提供了内置的Arbitrary实例。然�
 
 现在我们将创建一个简单的Random类型类来为用户自定义ADT生成随机值，并展示Length和Nat如何在此实现中发挥重要作用。像之前一样我们以Random类型类的定义开始。代码如下：
 
-```text
+```scala
 trait Random[A] {
     def get: A 
 }
@@ -146,7 +146,7 @@ def random[A](implicit r: Random[A]): A = r.get
 
 先来定义几个简单的Random实例。代码如下：
 
-```text
+```scala
 // Instance constructor:
 def createRandom[A](func: () => A): Random[A] = 
     new Random[A] { 
@@ -168,7 +168,7 @@ implicit val booleanRandom: Random[Boolean] =
 
 我们能通过random方法使用这些简单的随机值生成器。具体如下：
 
-```text
+```scala
 for(i <- 1 to 3) println(random[Int]) 
 // 0
 // 8
@@ -184,7 +184,7 @@ for(i <- 1 to 3) println(random[Char])
 
 我们能使用第三章中介绍的Generic和HList技巧为乘积类型创建Random实例。代码如下：
 
-```text
+```scala
 import shapeless._
 
 implicit def genericRandom[A, R]( 
@@ -207,7 +207,7 @@ implicit def hlistRandom[H, T <: HList](
 
 这样就可以得到样例类的Random实例。假设定义一个Cell样例类，并生成其随机值。代码如下：
 
-```text
+```scala
 case class Cell(col: Char, row: Int)
 
 for(i <- 1 to 5) println(random[Cell]) 
@@ -222,7 +222,7 @@ for(i <- 1 to 5) println(random[Cell])
 
 这个问题才开始让我们感觉有点难度：生成余积类型的Random实例，并随机选择一个子类。先来为余积类型定义一些基础实现。代码如下：
 
-```text
+```scala
 implicit val cnilRandom: Random[CNil] = 
     createRandom(() => throw new Exception("Inconceivable!"))
 
@@ -239,7 +239,7 @@ implicit def coproductRandom[H, T <: Coproduct](
 
 在上述的实现过程中计算chooseH的过程会使得Inl、Inr各占一半的概率，这看似平均其实会导致一个不平均的分布。考虑下述类型：
 
-```text
+```scala
 sealed trait Light 
 case object Red extends Light
 case object Amber extends Light 
@@ -257,7 +257,7 @@ Light的Repr类型是Red :+: Amber :+: Green :+: CNil，此类型的Random实例
 
 Random余积实例有6.75%的概率会抛出异常！多次运行就很有可能报错：
 
-```text
+```scala
 for(i <- 1 to 100) random[Light] 
 // java.lang.Exception: Inconceivable!
 //   ...
@@ -265,7 +265,7 @@ for(i <- 1 to 100) random[Light]
 
 要解决这个问题就要修改选中H或T的概率，正确的分布应该是选中H的概率在1/n，n是余积类型的元素数目，这能确保余积的子类能够以相等概率被选中，也确保在只有一个子类的余积类型中能够以100%的概率选中头元素，而不会选中CNil，也就不会调用cnilProduct.get方法。下面是更新后的实现，使用coproduct.Length来计算T中元素的个数，此处用了递归的原理，因为T又会分解成新的H和T，直到CNil，据此可保证子类选择的平均分布。代码如下：
 
-```text
+```scala
 import shapeless.ops.coproduct 
 import shapeless.ops.nat.ToInt
 
@@ -286,7 +286,7 @@ implicit def coproductRandom[H, T <: Coproduct, L <: Nat](
 
 有了这些修改就可以为任意的乘积或者余积类型生成随机值。余积类型测试如下：
 
-```text
+```scala
 for(i <- 1 to 5) println(random[Light]) 
 // Green
 // Red
@@ -301,7 +301,7 @@ for(i <- 1 to 5) println(random[Light])
 
 shapeless提供了一套基于Nat的操作，HList和Coproduct实例的apply方法可以接受一个Nat类型的参数或者类型参数，实现读取Nat实例对应位置的元素。使用方式如下：
 
-```text
+```scala
 import shapeless._
 
 val hlist = 123 :: "foo" :: true :: 'x' :: HNil
@@ -315,7 +315,7 @@ hlist.apply(Nat._3)
 
 shapeless中也提供了像take、drop、slice和upadateAt的其它操作。例如：
 
-```text
+```scala
 hlist.take(Nat._3).drop(Nat._1)
 // res3: String :: Boolean :: shapeless.HNil = foo :: true :: HNil
 
