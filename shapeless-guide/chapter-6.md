@@ -1,6 +1,6 @@
 # 第六章 对HList和Coproduct进行操作
 
-第一部分我们学习了为ADT派生类型类实例的方法，可以使用类型类派生的方式来致力于增强几乎任何类型类，尽管复杂的情况下为了操作HList和Coproduct必须写一系列的支持代码。
+第一部分我们学习了为ADT派生类型类实例的方法，我们可以使用类型类派生的方式来致力于增强几乎任何类型类，尽管复杂的情况下为了操作HList和Coproduct必须写一系列的支持代码。
 
 第二部分我们将着重介绍shapeless.ops包，它提供了一套有用的工具，可以将其直接用作代码块。每一个“操作（op）”分为两部分：一个在隐式解析过程中使用的类型类和为HList和Coproduct调用而准备的扩展方法。
 
@@ -10,11 +10,11 @@
 * shapeless.ops.coproduct：它为Coproduct定义了类型类，这些操作可以通过定义在shapeless.syntax.coproduct中的扩展方法被Coproduct直接使用。
 * shapeless.ops.record：它为shapeless记录（在5.2节中介绍的元素被标记的HList）定义了类型类，这些操作可以通过定义在shapeless.syntax.record中的扩展方法被HList使用，只需要显式引入shapeless.record。
 
-此书没有过多的空间逐一讲解所有“操作”。幸运的是大多数情况下我们的源码都通俗易懂并配有详细的文档。此处不准备提供详尽的指导而是介绍一些主要的理论和要点并向你展示如何从shapeless的基础代码中获取更进一步的信息。
+此书没有过多的空间逐一讲解所有可用的“操作”。幸运的是，大多数情况下我们的源码都通俗易懂并配有详细的文档。此处不准备提供详尽的指导而是介绍一些主要的理论和要点并向你展示如何从shapeless的基础代码中获取更进一步的信息。
 
 ## 6.1 简单的“操作”样例 <a id="61-&#x7B80;&#x5355;&#x7684;&#x64CD;&#x4F5C;&#x6837;&#x4F8B;"></a>
 
-HList有init和last两个扩展方法，它们分别基于shapeless.ops.hlist.Init和shapeless.ops.hlist.Last类型类。Coproduct有相似的方法和类型类。它们都是ops模式的完美样例。下面是这两个扩展方法的简单定义：
+HList有init和last两个扩展方法，它们分别基于shapeless.ops.hlist.Init和shapeless.ops.hlist.Last类型类。init删除HList的最后一个元素，而last删除除最后一个之外的所有元素。Coproduct有相似的方法和类型类。它们都是ops模式的完美样例。下面是这两个扩展方法的简单定义：
 
 ```scala
 package shapeless 
@@ -115,7 +115,7 @@ Penultimate[BigList].apply(bigList)
 // res4: Boolean = true
 ```
 
-获取Penultimate实例需要编译器同时完成获取Last和Init的实例，所以对于长度不满足的HList继承了与Last和Init的同一类型检查标准。代码如下：
+获取Penultimate实例需要编译器同时完成获取Last和Init的实例，所以对于长度不够的HList继承了与Last和Init的同一类型检查标准。代码如下：
 
 ```scala
 type TinyList = String :: HNil
@@ -249,7 +249,7 @@ IceCreamV1("Sundae", 1, true).migrateTo[IceCreamV2b]
 // <console>:23: error: could not find implicit value for parameter
 //    migration: Migration[IceCreamV1,IceCreamV2b]
 //         IceCreamV1("Sundae", 1, true).migrateTo[IceCreamV2b] 
-//                                       ^
+//                                                ^
 ```
 
 ### 6.3.2 第二步：调整字段顺序 <a id="632-&#x7B2C;&#x4E8C;&#x6B65;&#xFF1A;&#x8C03;&#x6574;&#x5B57;&#x6BB5;&#x987A;&#x5E8F;"></a>
@@ -295,7 +295,7 @@ IceCreamV1("Sundae", 1, true).migrateTo[IceCreamV2c]
 
 ### 6.3.4 第三步：增加字段 <a id="634-&#x7B2C;&#x4E09;&#x6B65;&#xFF1A;&#x589E;&#x52A0;&#x5B57;&#x6BB5;"></a>
 
-为了计算新增字段的默认值我们需要一些技巧。shapeless没有为这种情况提供类型类，但是Cat框架以幺半群（Monoid）的方式提供了这种类型类。下面是Monoid的简单定义：
+为了计算新增字段的默认值我们需要一些技巧。shapeless没有为这种情况提供类型类，但是Cats框架以幺半群（Monoid）的方式提供了这种类型类。下面是Monoid的简单定义：
 
 ```scala
 package cats
@@ -308,7 +308,7 @@ trait Monoid[A] {
 
 Monoid定义了两个操作：为创建一个“零”值定义的empty操作以及为两个值“相加”而定义的combine操作。在我们的代码中只需empty操作（默认值），但是定义一个combine操作也不麻烦。
 
-Cat为我们关心的所有基础类型（Int、Double、Boolean和String）提供了Monoid实例。我们可以使用第五章中的技巧为HNil和::定义Monoid实例。代码如下：
+Cats为我们关心的所有基础类型（Int、Double、Boolean和String）提供了Monoid实例。我们可以使用第五章中的技巧为HNil和::定义Monoid实例。代码如下：
 
 ```scala
 import cats.Monoid 
@@ -488,7 +488,7 @@ sundae.toMap
 
 ## 6.5 小结 <a id="65-&#x5C0F;&#x7ED3;"></a>
 
-这一章我们探索了shapeless.ops包中提供的几个类型类。我们以Last和Init作为两个简单的ops模式的样例并以链接现有代码段的方式建立了我们自己的Penultimate和Migration类型类。
+这一章我们探索了shapeless.ops包中提供的几个类型类。我们以Last和Init作为两个简单的ops模式的示例并以链接现有代码段的方式建立了我们自己的Penultimate和Migration类型类。
 
 剩下的很多ops类型类与已经学过的这些ops模式具有很多相似之处。最简单的学习方式就是查看shapeless.ops和shapeless.syntax包中的源码。
 
