@@ -8,13 +8,13 @@
 
 我们通过学习map方法的原理来引出多态函数。图7.1展示了普通list对象的映射操作。如果我们有一个List\[A\]对象，并提供一个“A=&gt;B”的函数，据此可得List\[B\]对象。
 
-![&#x56FE;7.1 &#x666E;&#x901A;list&#x5BF9;&#x8C61;&#x7684;map&#x64CD;&#x4F5C;&#xFF08;&#x5355;&#x4E00;&#x6620;&#x5C04;&#xFF09;](http://images2015.cnblogs.com/blog/704456/201701/704456-20170131231437089-532586052.png)
+![](../.gitbook/assets/img1.png)
 
 HList对象元素的异构类型导致这一方式不能正常运行，Scala函数修复了输入和输出类型使得map的结果的每一个元素都必须拥有相同的类型。
 
 理想情况下我们需要一个像图7.2中的map操作，它判断每一个输入的类型并决定每一个输出的类型，最终得到一个封闭的、能保持HList异构本质的组合变换。
 
-![&#x56FE;7.2 &#x5F02;&#x6784;list&#x5BF9;&#x8C61;&#x7684;map&#x64CD;&#x4F5C;&#xFF08;&#x591A;&#x6001;&#x6620;&#x5C04;&#xFF09;](http://images2015.cnblogs.com/blog/704456/201701/704456-20170131231445870-282014479.png)
+![](../.gitbook/assets/img2.png)
 
 不幸的是我们不能使用Scala函数来实现这种操作，需要一些新的方式，这种方式就是多态函数。
 
@@ -69,7 +69,7 @@ myPoly.apply(123)
 // res8: Double = 61.5
 ```
 
-我们可以使用一些微妙的作用域技巧，使编译器能够自动定位Case实例而不用任何多余的引入。Case有一个额外的类型参数P，该参数引用Poly的单例类型。Case\[P, A\]的隐式作用域包括Case、P和A的伴随对象。我们把P设置为myPoly.type，myPoly.type的伴随对象就是myPoly自身。换句话说，不管在哪里调用myPoly.apply方法Poly里定义的隐式Case实例总是处在作用域内。
+我们可以使用一些微妙的作用域技巧，使编译器能够自动定位Case实例而不用任何多余的引入。**Case有一个额外的类型参数P，该参数引用Poly的单例类型。Case\[P, A\]的隐式作用域包括Case、P和A的伴随对象。我们把P设置为myPoly.type，myPoly.type的伴随对象就是myPoly自身。换句话说，不管在哪里调用myPoly.apply方法Poly里定义的隐式Case实例总是处在作用域内。**
 
 ### 7.2.2 Poly语法规则 <a id="722-poly&#x8BED;&#x6CD5;&#x89C4;&#x5219;"></a>
 
@@ -91,7 +91,7 @@ object myPoly extends Poly1 {
 
 1. 我们继承自Poly1特质而不是Poly，shapeless提供了Poly类型和其一系列的子类，从Poly1到Poly22，它们支持不同参数个数的多态函数。
 2. Case.Aux类型与Poly的单例类型看上去没有关联，Case.Aux是Poly1里定义的一个类型别名，其实二者是有关联的，在Poly1的定义中我们可以清晰的看到。
-3. 我们使用了一个名叫at的辅助方法来定义case隐式实例，这与3.1.2节中介绍的实例构造子的作用相同，可以减少冗余代码。
+3. 我们使用了一个名叫at的辅助方法来定义case隐式实例，这与3.1.2节中介绍的实例构造函数的作用相同，可以减少冗余代码。
 
 除了语法差异，使用shapeless真实代码定义的myPoly在功能上与样例中定义的myPoly是一致的，我们能给其提供一个Int或String类型的参数，得到一个相应类型的返回结果。具体如下：
 
@@ -169,7 +169,7 @@ val a: Double = myPoly.apply(123)
 //    (which expands to) shapeless.poly.Case[myPoly.type,
 //   shapeless.HNil]{type Result = ?}
 //        val a: Double = myPoly.apply(123)
-//                                         ^
+//                                    ^
 ```
 
 如果我们增加一个类型注释，编译正常。如下：
@@ -244,7 +244,7 @@ object valueAndSizeOf extends Poly1 {
 //    mapper: shapeless.ops.hlist.FlatMapper[sizeOf.type,Int :: String
 //    :: Boolean :: shapeless.HNil]
 //         (10 :: "hello" :: true :: HNil).flatMap(sizeOf)
-//                                 ^
+//                                                ^
 ```
 
 map和flatMap分别基于Mapper和FlatMapper类型类，我们将在7.5节中看到一个直接使用Mapper进行操作的例子。
@@ -335,7 +335,7 @@ IceCream1("Sundae", 1, false).mapTo[IceCream2](conversions)
 // res2: IceCream2 = IceCream2(Sundae,true,0)
 ```
 
-mapTo语法看上去像一个单一的调用，但实际上是两次：一次调用mapTo确定B类型参数，另一次调用Builder.apply方法来指定Poly的类型。一些shapeless的内置的ops扩展方法使用相似的技巧为用户提供方便。
+mapTo语法看上去像一个单一的方法调用，但实际上是两次：一次调用mapTo确定B类型参数，另一次调用Builder.apply方法来指定Poly的类型。一些shapeless的内置的ops扩展方法使用相似的技巧为用户提供方便。
 
 ## 7.6 小结 <a id="76-&#x5C0F;&#x7ED3;"></a>
 
