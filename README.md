@@ -6,14 +6,8 @@ GitBook：https://dreamylost.gitbook.io/dreamylost
 
 翻译：梦境迷离
 
-GitHub： https://github.com/jxnu-liguobin/shapeless-guide-chinese
-
-学习交流：dreamylost@outlook.com
-
 博客：https://dreamylost.cn
 
-吹逼QQ群：655462259
-
-Scala/函数式/反应式：892402908
+Scala技术交流QQ群：892402908
 
 
